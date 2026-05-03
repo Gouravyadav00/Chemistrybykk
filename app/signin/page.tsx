@@ -10,6 +10,7 @@ import {
   EyeOff,
   GraduationCap,
   Lock,
+  LogOut,
   School,
   Sparkles,
   User,
@@ -56,31 +57,28 @@ export default function SignInPage() {
               setMe({ role: "guest" });
             }}
           />
-        ) : (
-          <SignInCard
-            onAdmin={() => setMe({ role: "admin" })}
-            current={me?.role === "subscriber" ? me.subscriber : undefined}
+        ) : me?.role === "subscriber" ? (
+          <SignedInCard
+            subscriber={me.subscriber}
+            onSignOut={async () => {
+              await fetch("/api/auth", { method: "DELETE" });
+              setMe({ role: "guest" });
+            }}
           />
+        ) : (
+          <SignInCard onAdmin={() => setMe({ role: "admin" })} />
         )}
       </div>
     </main>
   );
 }
 
-function SignInCard({
-  onAdmin,
-  current,
-}: {
-  onAdmin: () => void;
-  current?: { email: string; name?: string; class?: string };
-}) {
-  const [mode, setMode] = useState<"signin" | "signup">(
-    current ? "signin" : "signup",
-  );
-  const [name, setName] = useState(current?.name ?? "");
-  const [email, setEmail] = useState(current?.email ?? "");
+function SignInCard({ onAdmin }: { onAdmin: () => void }) {
+  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
-  const [studentClass, setStudentClass] = useState(current?.class ?? "");
+  const [studentClass, setStudentClass] = useState("");
   const [school, setSchool] = useState("");
   const [exam, setExam] = useState("");
   const [city, setCity] = useState("");
@@ -211,13 +209,13 @@ function SignInCard({
           </Field>
         )}
 
-        <Field label="Email" icon={<AtSign size={16} />}>
+        <Field label="Email or Username" icon={<AtSign size={16} />}>
           <input
-            type="email"
+            type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            autoComplete="email"
+            autoComplete="username"
             required
             className="bg-transparent outline-none w-full text-sm text-clay-ink dark:text-white"
           />
@@ -398,6 +396,53 @@ function Bullet({ children }: { children: React.ReactNode }) {
       <CheckCircle2 size={16} className="text-clay-accent mt-0.5 flex-shrink-0" />
       <span>{children}</span>
     </li>
+  );
+}
+
+function SignedInCard({
+  subscriber,
+  onSignOut,
+}: {
+  subscriber: { email: string; name?: string; class?: string };
+  onSignOut: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-md mx-auto clay p-8 text-center"
+    >
+      <motion.div
+        animate={{ y: [0, -8, 0] }}
+        transition={{ duration: 3, repeat: Infinity }}
+        className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-blue-200 to-blue-500 grid place-items-center text-white shadow-clay-sm mb-5"
+      >
+        <Sparkles size={28} />
+      </motion.div>
+      <h2 className="display text-2xl font-extrabold text-clay-ink dark:text-white">
+        You're signed in {subscriber.name ? `, ${subscriber.name}` : ""} 👋
+      </h2>
+      <p className="mt-2 text-sm text-clay-muted">
+        We'll send you a heads-up when fresh notes, cheatsheets or videos drop.
+      </p>
+      <div className="clay-sm mt-5 px-4 py-2 inline-flex items-center gap-2 text-xs">
+        <AtSign size={14} className="text-clay-accent" />
+        <span className="text-clay-ink dark:text-white font-medium">
+          {subscriber.email}
+        </span>
+        {subscriber.class && (
+          <span className="ml-1 text-clay-muted">· Class {subscriber.class}</span>
+        )}
+      </div>
+      <div className="mt-6 flex flex-wrap gap-2 justify-center">
+        <Link href="/#learn" className="clay-btn-primary text-sm">
+          Continue Learning
+        </Link>
+        <button onClick={onSignOut} className="clay-btn-secondary text-sm">
+          <LogOut size={14} /> Sign Out
+        </button>
+      </div>
+    </motion.div>
   );
 }
 

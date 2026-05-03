@@ -2,10 +2,18 @@
 
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { LayoutDashboard, Menu, UserCircle2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 import Logo from "./Logo";
+
+type Whoami =
+  | { role: "guest" }
+  | {
+      role: "subscriber";
+      subscriber: { email: string; name?: string; class?: string };
+    }
+  | { role: "admin" };
 
 const links = [
   { href: "#home", label: "Home" },
@@ -14,10 +22,34 @@ const links = [
   { href: "#connect", label: "Connect" },
 ];
 
+const firstName = (full?: string) => {
+  if (!full) return undefined;
+  return full.trim().split(/\s+/)[0];
+};
+
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [me, setMe] = useState<Whoami | null>(null);
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 60], [0, -2]);
+
+  useEffect(() => {
+    fetch("/api/auth")
+      .then((r) => r.json())
+      .then(setMe)
+      .catch(() => setMe({ role: "guest" }));
+  }, []);
+
+  const greet = (() => {
+    if (!me || me.role === "guest") return null;
+    if (me.role === "admin") {
+      return { label: "Khyati", icon: <LayoutDashboard size={14} /> };
+    }
+    const name =
+      firstName(me.subscriber.name) ??
+      me.subscriber.email.split("@")[0];
+    return { label: name, icon: <UserCircle2 size={14} /> };
+  })();
 
   return (
     <motion.header
@@ -44,12 +76,23 @@ export default function Navbar() {
               {l.label}
             </a>
           ))}
-          <Link
-            href="/signin"
-            className="px-3 py-2 rounded-xl text-sm font-semibold text-clay-accent"
-          >
-            Sign In
-          </Link>
+          {greet ? (
+            <Link
+              href="/signin"
+              className="ml-1 px-3 py-2 rounded-xl text-sm font-semibold text-clay-accent flex items-center gap-1.5 max-w-[10rem] truncate"
+              title={`Signed in as ${greet.label}`}
+            >
+              {greet.icon}
+              <span className="truncate">Hi, {greet.label}</span>
+            </Link>
+          ) : (
+            <Link
+              href="/signin"
+              className="ml-1 px-3 py-2 rounded-xl text-sm font-semibold text-clay-accent"
+            >
+              Sign In
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -82,9 +125,17 @@ export default function Navbar() {
           ))}
           <Link
             href="/signin"
-            className="px-3 py-3 rounded-xl text-clay-accent font-semibold"
+            onClick={() => setOpen(false)}
+            className="px-3 py-3 rounded-xl text-clay-accent font-semibold flex items-center gap-2"
           >
-            Sign In
+            {greet ? (
+              <>
+                {greet.icon}
+                Hi, {greet.label}
+              </>
+            ) : (
+              "Sign In"
+            )}
           </Link>
         </motion.div>
       )}
