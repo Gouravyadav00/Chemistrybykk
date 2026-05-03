@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap");
+
+:root {
+  color-scheme: light;
+  --bg-grad-1: #eaf2ff;
+  --bg-grad-2: #f8fbff;
+  --bg-grad-3: #dbe7ff;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg-grad-1: #07142e;
+  --bg-grad-2: #0a1c44;
+  --bg-grad-3: #050b1f;
+}
+
+html,
+body {
+  background:
+    radial-gradient(60rem 60rem at 10% -10%, var(--bg-grad-3) 0%, transparent 60%),
+    radial-gradient(60rem 60rem at 110% 10%, var(--bg-grad-1) 0%, transparent 55%),
+    var(--bg-grad-2);
+  min-height: 100%;
+  font-family: "Inter", system-ui, sans-serif;
+  color: #0b1f4d;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: none) {
+  /* on touch devices, suppress sticky hover states after tap */
+  .clay-btn:hover,
+  .clay-btn-primary:hover,
+  .clay-btn-secondary:hover {
+    transform: none;
+  }
+}
+
+/* respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.dark body {
+  color: #dde7ff;
+}
+
+@layer components {
+  .clay {
+    @apply bg-white rounded-clay shadow-clay;
+  }
+  .dark .clay {
+    @apply bg-[#0f1d3f] shadow-clay-dark;
+  }
+  .clay-sm {
+    @apply bg-white rounded-2xl shadow-clay-sm;
+  }
+  .dark .clay-sm {
+    background: #0f1d3f;
+    box-shadow:
+      6px 6px 14px rgba(0, 0, 0, 0.5),
+      -3px -3px 8px rgba(255, 255, 255, 0.03);
+  }
+  .clay-inset {
+    @apply bg-clay-bg rounded-2xl shadow-clay-inset;
+  }
+  .dark .clay-inset {
+    background: #0a163a;
+    box-shadow:
+      inset 6px 6px 14px rgba(0, 0, 0, 0.45),
+      inset -4px -4px 10px rgba(255, 255, 255, 0.03);
+  }
+  .clay-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition-all active:scale-[0.97];
+    box-shadow:
+      8px 8px 18px rgba(37, 99, 235, 0.25),
+      -4px -4px 12px rgba(255, 255, 255, 0.9),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.45);
+  }
+  .clay-btn:hover {
+    transform: translateY(-1px);
+  }
+  .clay-btn:active {
+    box-shadow: inset 4px 4px 10px rgba(0, 0, 0, 0.18),
+      inset -3px -3px 8px rgba(255, 255, 255, 0.25);
+  }
+  .clay-btn-primary {
+    @apply clay-btn text-white;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  }
+  .clay-btn-secondary {
+    @apply clay-btn text-clay-ink bg-white;
+  }
+  .dark .clay-btn-secondary {
+    @apply text-white;
+    background: #0f1d3f;
+    box-shadow:
+      6px 6px 14px rgba(0, 0, 0, 0.5),
+      -3px -3px 8px rgba(255, 255, 255, 0.04);
+  }
+  .glass {
+    backdrop-filter: blur(14px);
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+  }
+  .dark .glass {
+    background: rgba(15, 29, 63, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(219, 231, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(219, 231, 255, 0.6) 100%
+    );
+    background-size: 800px 100%;
+    @apply animate-shimmer rounded-xl;
+  }
+  .display {
+    font-family: "Plus Jakarta Sans", "Inter", sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* hide scrollbar for horizontal chapter rails */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* page-flip notebook effect */
+.notebook {
+  perspective: 1800px;
+}
+.notebook-page {
+  transform-origin: left center;
+  transition: transform 600ms cubic-bezier(0.7, 0.05, 0.3, 1);
+  backface-visibility: hidden;
+}
+
+/* clay 3d shapes — pure CSS pseudo-3D blobs */
+.clay-blob {
+  border-radius: 50%;
+  filter: blur(0.4px);
+  background:
+    radial-gradient(circle at 30% 30%, #ffffff 0%, transparent 35%),
+    radial-gradient(circle at 70% 70%, rgba(29, 78, 216, 0.45) 0%, transparent 60%),
+    linear-gradient(135deg, #93c5fd 0%, #2563eb 100%);
+  box-shadow:
+    inset -10px -14px 24px rgba(15, 23, 42, 0.18),
+    inset 8px 10px 24px rgba(255, 255, 255, 0.55),
+    18px 22px 40px rgba(37, 99, 235, 0.28);
+}
+
+.clay-blob.alt {
+  background:
+    radial-gradient(circle at 30% 30%, #ffffff 0%, transparent 38%),
+    linear-gradient(135deg, #dbeafe 0%, #60a5fa 100%);
+}
+
+.clay-blob.cube {
+  border-radius: 22%;
+}
+
+.clay-blob.pill {
+  border-radius: 999px;
+}

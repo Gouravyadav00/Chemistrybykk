@@ -1,0 +1,392 @@
+"use client";
+
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  BookOpen,
+  CheckCircle2,
+  Circle,
+  Download,
+  FileText,
+  Layers,
+  Search,
+  Sparkles,
+  Zap,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  classes,
+  defaultCheatsheetPath,
+  defaultNotesPath,
+  getAssetAvailable,
+  getAssetSrc,
+  isImageSrc,
+  type AssetKind,
+  type Chapter,
+} from "@/data/chapters";
+import { resolveClass } from "@/lib/notesStore";
+import AssetModal from "./AssetModal";
+
+type ResolvedClass = ReturnType<typeof resolveClass>;
+
+export default function LearningHub() {
+  const [activeId, setActiveId] = useState<string>("12");
+  const [kind, setKind] = useState<AssetKind>("notes");
+  const [resolved, setResolved] = useState<ResolvedClass | null>(null);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [open, setOpen] = useState<{ chapter: Chapter; kind: AssetKind } | null>(
+    null,
+  );
+  const [, force] = useState(0);
+
+  useEffect(() => {
+    setResolved(resolveClass(activeId));
+    setSelected(new Set());
+  }, [activeId]);
+
+  // also clear selection when toggling notes/cheatsheet
+  useEffect(() => {
+    setSelected(new Set());
+  }, [kind]);
+
+  useEffect(() => {
+    const handler = () => {
+      setResolved(resolveClass(activeId));
+      force((n) => n + 1);
+    };
+    window.addEventListener("cbk:notes-changed", handler);
+    return () => window.removeEventListener("cbk:notes-changed", handler);
+  }, [activeId]);
+
+  const chapters = useMemo(() => {
+    if (!resolved) return [];
+    if (!search.trim()) return resolved.chapters;
+    const q = search.toLowerCase();
+    return resolved.chapters.filter((c) => c.name.toLowerCase().includes(q));
+  }, [resolved, search]);
+
+  const allAvailable = resolved?.chapters.every((c) =>
+    getAssetAvailable(c, kind),
+  );
+
+  const toggleSelect = (slug: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  };
+
+  const downloadOne = (ch: Chapter) => {
+    const src =
+      getAssetSrc(ch, kind) ??
+      (kind === "notes"
+        ? defaultNotesPath(activeId, ch.slug)
+        : defaultCheatsheetPath(activeId, ch.slug));
+    const ext = isImageSrc(src)
+      ? src.match(/\.(png|jpe?g|webp|gif|avif)$/i)?.[0] ?? ".png"
+      : ".pdf";
+    const a = document.createElement("a");
+    a.href = src;
+    a.download = `${ch.slug}${kind === "cheatsheet" ? "-cheatsheet" : ""}${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const downloadSelected = () => {
+    if (!resolved) return;
+    resolved.chapters
+      .filter((c) => selected.has(c.slug) && getAssetAvailable(c, kind))
+      .forEach((c, i) => setTimeout(() => downloadOne(c), i * 250));
+  };
+
+  const downloadBundle = () => {
+    if (!resolved) return;
+    resolved.chapters
+      .filter((c) => getAssetAvailable(c, kind))
+      .forEach((c, i) => setTimeout(() => downloadOne(c), i * 250));
+  };
+
+  return (
+    <section id="learn" className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+      <div className="text-center max-w-2xl mx-auto mb-10">
+        <div className="inline-flex items-center gap-2 clay-sm px-4 py-2 mb-4 text-sm text-clay-accent font-semibold">
+          <Layers size={14} /> Learning Hub
+        </div>
+        <h2 className="display text-3xl sm:text-4xl font-extrabold text-clay-ink dark:text-white">
+          Pick a class. Open a chapter.
+        </h2>
+        <p className="mt-3 text-clay-muted">
+          Tap any chapter to read inline, switch to <b>Cheatsheets</b> for a
+          quick revision sheet, or grab the full class bundle.
+        </p>
+      </div>
+
+      {/* class tabs */}
+      <div className="flex justify-start sm:justify-center gap-2 sm:gap-3 mb-6 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1 snap-x snap-mandatory">
+        {classes.map((c) => {
+          const active = c.classId === activeId;
+          return (
+            <button
+              key={c.classId}
+              onClick={() => setActiveId(c.classId)}
+              className={`snap-start flex-shrink-0 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-semibold text-sm sm:text-base transition-all min-h-[44px] ${
+                active
+                  ? "clay-btn-primary"
+                  : "clay-btn-secondary text-clay-ink dark:text-white"
+              }`}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* notes / cheatsheet switch */}
+      <div className="flex justify-center mb-6">
+        <div className="clay-inset p-1.5 inline-flex items-center gap-1 rounded-2xl">
+          <SwitchTab
+            active={kind === "notes"}
+            onClick={() => setKind("notes")}
+            icon={<FileText size={14} />}
+            label="Notes"
+          />
+          <SwitchTab
+            active={kind === "cheatsheet"}
+            onClick={() => setKind("cheatsheet")}
+            icon={<Zap size={14} />}
+            label="Cheatsheets"
+            tone="warm"
+          />
+        </div>
+      </div>
+
+      {/* search + actions */}
+      <div className="clay p-4 sm:p-5 mb-6 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+        <div className="clay-inset flex items-center gap-2 px-4 py-3 flex-1 md:max-w-md">
+          <Search size={16} className="text-clay-muted flex-shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Search chapters…`}
+            className="bg-transparent outline-none text-sm w-full text-clay-ink dark:text-white placeholder:text-clay-muted min-w-0"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={downloadSelected}
+            disabled={selected.size === 0}
+            className={`clay-btn-secondary text-xs sm:text-sm flex-1 md:flex-initial ${
+              selected.size === 0 ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            <Download size={16} />
+            Selected ({selected.size})
+          </button>
+          <button
+            onClick={downloadBundle}
+            disabled={!allAvailable}
+            className={`clay-btn-primary text-xs sm:text-sm flex-1 md:flex-initial ${
+              !allAvailable ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            <Sparkles size={16} />
+            <span className="whitespace-nowrap">
+              Full {kind === "cheatsheet" ? "Cheatsheet" : "Notes"} Bundle
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* chapter grid */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeId + kind + search}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.25 }}
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          {chapters.map((ch, i) => {
+            const isSel = selected.has(ch.slug);
+            const notesOk = ch.notesAvailable;
+            const cheatOk = ch.cheatsheetAvailable;
+            const activeAvail = kind === "notes" ? notesOk : cheatOk;
+            return (
+              <motion.div
+                key={ch.slug}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="clay p-5 group hover:-translate-y-1 transition-transform cursor-pointer"
+                onClick={() => setOpen({ chapter: ch, kind })}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div
+                    className={`w-11 h-11 rounded-2xl grid place-items-center shadow-clay-sm ${
+                      kind === "cheatsheet"
+                        ? "bg-gradient-to-br from-amber-100 to-orange-200 text-orange-600"
+                        : "bg-gradient-to-br from-blue-100 to-blue-300 text-clay-accentDeep"
+                    }`}
+                  >
+                    {kind === "cheatsheet" ? (
+                      <Zap size={18} />
+                    ) : (
+                      <BookOpen size={18} />
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSelect(ch.slug);
+                    }}
+                    aria-label="Select chapter"
+                    className="text-clay-accent"
+                  >
+                    {isSel ? <CheckCircle2 size={22} /> : <Circle size={22} />}
+                  </button>
+                </div>
+                <h3 className="display font-bold text-clay-ink dark:text-white leading-snug">
+                  {ch.name}
+                </h3>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <span
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                      activeAvail
+                        ? kind === "cheatsheet"
+                          ? "bg-amber-100 text-orange-700"
+                          : "bg-blue-100 text-clay-accentDeep"
+                        : "bg-orange-100 text-orange-600"
+                    }`}
+                  >
+                    {activeAvail
+                      ? kind === "cheatsheet"
+                        ? "Cheatsheet Ready"
+                        : "Notes Ready"
+                      : "Coming Soon"}
+                  </span>
+                  {activeAvail && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadOne(ch);
+                      }}
+                      className="text-clay-accent hover:text-clay-accentDeep flex items-center gap-1 text-sm font-semibold"
+                    >
+                      <Download size={14} />{" "}
+                      {kind === "cheatsheet" ? "Sheet" : "PDF"}
+                    </button>
+                  )}
+                </div>
+
+                {/* small dual-availability indicator */}
+                <div className="mt-3 flex items-center gap-2 text-[10px] uppercase tracking-wide">
+                  <Pill
+                    on={notesOk}
+                    onClickInline={(e) => {
+                      e.stopPropagation();
+                      setOpen({ chapter: ch, kind: "notes" });
+                    }}
+                    icon={<FileText size={10} />}
+                    label="Notes"
+                  />
+                  <Pill
+                    on={cheatOk}
+                    onClickInline={(e) => {
+                      e.stopPropagation();
+                      setOpen({ chapter: ch, kind: "cheatsheet" });
+                    }}
+                    icon={<Zap size={10} />}
+                    label="Cheatsheet"
+                    tone="warm"
+                  />
+                </div>
+              </motion.div>
+            );
+          })}
+          {chapters.length === 0 && (
+            <div className="col-span-full clay p-10 text-center text-clay-muted">
+              <FileText size={28} className="mx-auto mb-2 text-clay-accent" />
+              No chapters match "{search}". Try a different keyword.
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      <AssetModal
+        chapter={open?.chapter ?? null}
+        classId={activeId}
+        kind={open?.kind ?? "notes"}
+        onClose={() => setOpen(null)}
+      />
+    </section>
+  );
+}
+
+function SwitchTab({
+  active,
+  onClick,
+  icon,
+  label,
+  tone = "blue",
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  tone?: "blue" | "warm";
+}) {
+  const activeClass =
+    tone === "warm"
+      ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-clay-sm"
+      : "clay-btn-primary";
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
+        active
+          ? activeClass
+          : "text-clay-muted hover:text-clay-ink dark:hover:text-white"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function Pill({
+  on,
+  onClickInline,
+  icon,
+  label,
+  tone = "blue",
+}: {
+  on: boolean;
+  onClickInline: (e: React.MouseEvent) => void;
+  icon: React.ReactNode;
+  label: string;
+  tone?: "blue" | "warm";
+}) {
+  const onClasses =
+    tone === "warm"
+      ? "bg-amber-100 text-orange-700 hover:bg-amber-200"
+      : "bg-blue-100 text-clay-accentDeep hover:bg-blue-200";
+  return (
+    <button
+      onClick={onClickInline}
+      disabled={!on}
+      className={`px-2 py-1 rounded-full flex items-center gap-1 font-semibold transition-colors ${
+        on
+          ? onClasses
+          : "bg-clay-soft/60 text-clay-muted cursor-not-allowed opacity-60"
+      }`}
+    >
+      {icon} {label}
+    </button>
+  );
+}
