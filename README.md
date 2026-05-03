@@ -58,16 +58,19 @@ gh repo create ChemistryByKK --public --source=. --push
 3. Framework preset: **Next.js** (auto-detected)
 4. Click **Deploy** — your site goes live in ~30 seconds.
 
-### Step 3 — Connect Vercel KV (the students database)
+### Step 3 — Connect Redis (the students database)
+
+Vercel migrated their first-party "KV" to be Marketplace-only. The site uses
+the `@upstash/redis` SDK, which auto-detects either naming scheme.
 
 1. In your Vercel project → **Storage** tab → **Create Database**
-2. Pick **KV** (powered by Upstash Redis) → Hobby tier (free, 256 MB)
-3. Name it e.g. `chemistrybykk-kv`, region close to your users (e.g. `Mumbai – bom1`)
-4. Click **Connect Project** → select this project → all 4 environment variables are auto-injected:
-   - `KV_URL`
-   - `KV_REST_API_URL`
-   - `KV_REST_API_TOKEN`
-   - `KV_REST_API_READ_ONLY_TOKEN`
+2. Pick **Redis** (or **Upstash → Redis** if it asks) → free tier (256 MB)
+3. Region: close to your users (e.g. `Mumbai – bom1`)
+4. Name it e.g. `chemistrybykk-redis`
+5. Click **Connect Project** → select this project → all environments → 2 env
+   vars are auto-injected:
+   - `UPSTASH_REDIS_REST_URL`
+   - `UPSTASH_REDIS_REST_TOKEN`
 
 ### Step 4 — Add admin secrets
 
