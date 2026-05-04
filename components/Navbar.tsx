@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { LayoutDashboard, Menu, UserCircle2, X } from "lucide-react";
+import {
+  LayoutDashboard,
+  Menu,
+  MessageCircleQuestion,
+  UserCircle2,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 import Logo from "./Logo";
@@ -30,6 +36,7 @@ const firstName = (full?: string) => {
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [me, setMe] = useState<Whoami | null>(null);
+  const [doubtUnread, setDoubtUnread] = useState(0);
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 60], [0, -2]);
 
@@ -39,6 +46,20 @@ export default function Navbar() {
       .then(setMe)
       .catch(() => setMe({ role: "guest" }));
   }, []);
+
+  useEffect(() => {
+    if (!me || me.role === "guest") return;
+    const load = () =>
+      fetch("/api/doubts/unread")
+        .then((r) => r.json())
+        .then((d) => setDoubtUnread(d.unread ?? 0))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 60_000);
+    return () => clearInterval(t);
+  }, [me]);
+
+  const showDoubts = !!me && me.role !== "guest" && me.role !== "admin";
 
   const greet = (() => {
     if (!me || me.role === "guest") return null;
@@ -76,6 +97,20 @@ export default function Navbar() {
               {l.label}
             </a>
           ))}
+          {showDoubts && (
+            <Link
+              href="/doubts"
+              className="px-3 py-2 rounded-xl text-sm font-medium text-clay-muted hover:text-clay-accent hover:bg-white/60 dark:hover:bg-white/5 transition flex items-center gap-1.5 relative"
+            >
+              <MessageCircleQuestion size={14} />
+              Doubts
+              {doubtUnread > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-clay-accent text-white min-w-[18px] text-center">
+                  {doubtUnread > 9 ? "9+" : doubtUnread}
+                </span>
+              )}
+            </Link>
+          )}
           {greet ? (
             <Link
               href="/signin"
@@ -123,6 +158,21 @@ export default function Navbar() {
               {l.label}
             </a>
           ))}
+          {showDoubts && (
+            <Link
+              href="/doubts"
+              onClick={() => setOpen(false)}
+              className="px-3 py-3 rounded-xl text-clay-ink dark:text-white hover:bg-clay-soft/50 flex items-center gap-2"
+            >
+              <MessageCircleQuestion size={14} />
+              Doubts
+              {doubtUnread > 0 && (
+                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-clay-accent text-white">
+                  {doubtUnread}
+                </span>
+              )}
+            </Link>
+          )}
           <Link
             href="/signin"
             onClick={() => setOpen(false)}

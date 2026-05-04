@@ -5,11 +5,13 @@ import {
   BarChart3,
   FileText,
   LogOut,
+  MessageCircleQuestion,
   Trash2,
   Upload,
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import AdminDoubts from "./AdminDoubts";
 import {
   classes,
   defaultCheatsheetPath,
@@ -25,10 +27,22 @@ import {
 } from "@/lib/notesStore";
 import StudentsAnalytics from "./StudentsAnalytics";
 
-type Tab = "library" | "students";
+type Tab = "library" | "students" | "doubts";
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("library");
+  const [doubtBadge, setDoubtBadge] = useState(0);
+
+  useEffect(() => {
+    const load = () =>
+      fetch("/api/doubts/unread")
+        .then((r) => r.json())
+        .then((d) => setDoubtBadge(d.unread ?? 0))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
     <div>
@@ -38,7 +52,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             Welcome back, Khyati 👋
           </h1>
           <p className="text-clay-muted text-sm">
-            Manage notes & students from one place.
+            Manage notes, students & doubts from one place.
           </p>
         </div>
         <button onClick={onLogout} className="clay-btn-secondary text-sm">
@@ -46,7 +60,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         </button>
       </div>
 
-      <div className="clay-inset p-1 inline-flex gap-1 rounded-2xl mb-6">
+      <div className="clay-inset p-1 inline-flex gap-1 rounded-2xl mb-6 flex-wrap">
         <TabBtn
           active={tab === "library"}
           onClick={() => setTab("library")}
@@ -59,9 +73,22 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           icon={<BarChart3 size={14} />}
           label="Students"
         />
+        <TabBtn
+          active={tab === "doubts"}
+          onClick={() => setTab("doubts")}
+          icon={<MessageCircleQuestion size={14} />}
+          label="Doubts"
+          badge={doubtBadge}
+        />
       </div>
 
-      {tab === "library" ? <LibraryTab /> : <StudentsAnalytics />}
+      {tab === "library" ? (
+        <LibraryTab />
+      ) : tab === "students" ? (
+        <StudentsAnalytics />
+      ) : (
+        <AdminDoubts />
+      )}
     </div>
   );
 }
@@ -71,16 +98,18 @@ function TabBtn({
   onClick,
   icon,
   label,
+  badge,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
+  badge?: number;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${
+      className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition relative ${
         active
           ? "clay-btn-primary"
           : "text-clay-muted hover:text-clay-ink dark:hover:text-white"
@@ -88,6 +117,11 @@ function TabBtn({
     >
       {icon}
       {label}
+      {badge !== undefined && badge > 0 && (
+        <span className="ml-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-clay-accent text-white min-w-[18px] text-center">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </button>
   );
 }

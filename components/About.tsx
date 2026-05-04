@@ -41,7 +41,7 @@ const credentials = [
   },
   {
     icon: BookOpen,
-    label: "Chemistry Teacher · Class 11–12",
+    label: "Chemistry Teacher · Class 9–12",
     sub: "RDS School, Dharuhera",
   },
   {
