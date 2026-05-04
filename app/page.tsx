@@ -6,6 +6,7 @@ import LearningHub from "@/components/LearningHub";
 import Navbar from "@/components/Navbar";
 import SignInToast from "@/components/SignInToast";
 import SocialLinks from "@/components/SocialLinks";
+import Testimonials from "@/components/Testimonials";
 import VisitPing from "@/components/VisitPing";
 
 export default function HomePage() {
@@ -19,6 +20,7 @@ export default function HomePage() {
         <Hero />
         <About />
         <LearningHub />
+        <Testimonials />
         <SocialLinks />
       </main>
       <Footer />

@@ -19,6 +19,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Logo from "@/components/Logo";
 import AdminDashboard from "@/components/AdminDashboard";
+import RoadmapBonus from "@/components/RoadmapBonus";
+import TestimonialSubmit from "@/components/TestimonialSubmit";
 
 type Whoami =
   | { role: "guest" }
@@ -132,6 +134,7 @@ function SignInCard({ onAdmin }: { onAdmin: () => void }) {
       <SuccessCard
         kind={done}
         email={email}
+        studentClass={studentClass}
         onReset={() => {
           setDone(null);
           setName("");
@@ -410,33 +413,47 @@ function SignedInCard({
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-md mx-auto clay p-8 text-center"
+      className="max-w-2xl mx-auto clay p-6 sm:p-8"
     >
-      <motion.div
-        animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 3, repeat: Infinity }}
-        className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-blue-200 to-blue-500 grid place-items-center text-white shadow-clay-sm mb-5"
-      >
-        <Sparkles size={28} />
-      </motion.div>
-      <h2 className="display text-2xl font-extrabold text-clay-ink dark:text-white">
-        You're signed in {subscriber.name ? `, ${subscriber.name}` : ""} 👋
-      </h2>
-      <p className="mt-2 text-sm text-clay-muted">
-        We'll send you a heads-up when fresh notes, cheatsheets or videos drop.
-      </p>
-      <div className="clay-sm mt-5 px-4 py-2 inline-flex items-center gap-2 text-xs">
-        <AtSign size={14} className="text-clay-accent" />
-        <span className="text-clay-ink dark:text-white font-medium">
-          {subscriber.email}
-        </span>
-        {subscriber.class && (
-          <span className="ml-1 text-clay-muted">· Class {subscriber.class}</span>
-        )}
+      <div className="text-center">
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-blue-200 to-blue-500 grid place-items-center text-white shadow-clay-sm mb-5"
+        >
+          <Sparkles size={28} />
+        </motion.div>
+        <h2 className="display text-2xl font-extrabold text-clay-ink dark:text-white">
+          You're signed in {subscriber.name ? `, ${subscriber.name}` : ""} 👋
+        </h2>
+        <p className="mt-2 text-sm text-clay-muted">
+          Glad to have you back. Pick up where you left off below.
+        </p>
+        <div className="clay-sm mt-5 px-4 py-2 inline-flex items-center gap-2 text-xs">
+          <AtSign size={14} className="text-clay-accent" />
+          <span className="text-clay-ink dark:text-white font-medium">
+            {subscriber.email}
+          </span>
+          {subscriber.class && (
+            <span className="ml-1 text-clay-muted">· Class {subscriber.class}</span>
+          )}
+        </div>
       </div>
-      <div className="mt-6 flex flex-wrap gap-2 justify-center">
+
+      <div className="mt-6">
+        <RoadmapBonus preferredClass={subscriber.class} />
+      </div>
+
+      <div className="mt-5">
+        <TestimonialSubmit />
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-2 justify-center">
         <Link href="/#learn" className="clay-btn-primary text-sm">
           Continue Learning
+        </Link>
+        <Link href="/doubts" className="clay-btn-secondary text-sm">
+          Ask a Doubt
         </Link>
         <button onClick={onSignOut} className="clay-btn-secondary text-sm">
           <LogOut size={14} /> Sign Out
@@ -449,40 +466,52 @@ function SignedInCard({
 function SuccessCard({
   kind,
   email,
+  studentClass,
   onReset,
 }: {
   kind: "added" | "exists";
   email: string;
+  studentClass?: string;
   onReset: () => void;
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-md mx-auto clay p-8 text-center"
+      className="max-w-2xl mx-auto clay p-6 sm:p-8"
     >
-      <motion.div
-        animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 3, repeat: Infinity }}
-        className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-blue-200 to-blue-500 grid place-items-center text-white shadow-clay-sm mb-5"
-      >
-        <Sparkles size={28} />
-      </motion.div>
-      <h2 className="display text-2xl font-extrabold text-clay-ink dark:text-white">
-        {kind === "added" ? "You're in! 🎉" : "Welcome back!"}
-      </h2>
-      <p className="mt-2 text-sm text-clay-muted">
-        {kind === "added"
-          ? "We'll send a heads-up when fresh notes, cheatsheets or videos drop."
-          : "You're already on the list — we'll keep you in the loop."}
-      </p>
-      <div className="clay-sm mt-5 px-4 py-2 inline-flex items-center gap-2 text-xs">
-        <AtSign size={14} className="text-clay-accent" />
-        <span className="text-clay-ink dark:text-white font-medium">{email}</span>
+      <div className="text-center">
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-blue-200 to-blue-500 grid place-items-center text-white shadow-clay-sm mb-5"
+        >
+          <Sparkles size={28} />
+        </motion.div>
+        <h2 className="display text-2xl font-extrabold text-clay-ink dark:text-white">
+          {kind === "added" ? "You're in! 🎉" : "Welcome back!"}
+        </h2>
+        <p className="mt-2 text-sm text-clay-muted">
+          {kind === "added"
+            ? "Thanks for joining — here's a welcome bonus to help you get started."
+            : "Good to see you again. Here's your roadmap if you ever need a refresher."}
+        </p>
+        <div className="clay-sm mt-5 px-4 py-2 inline-flex items-center gap-2 text-xs">
+          <AtSign size={14} className="text-clay-accent" />
+          <span className="text-clay-ink dark:text-white font-medium">{email}</span>
+        </div>
       </div>
-      <div className="mt-6 flex flex-wrap gap-2 justify-center">
+
+      <div className="mt-6">
+        <RoadmapBonus preferredClass={studentClass} />
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-2 justify-center">
         <Link href="/#learn" className="clay-btn-primary text-sm">
-          Start Reading
+          Browse Notes
+        </Link>
+        <Link href="/doubts" className="clay-btn-secondary text-sm">
+          Ask a Doubt
         </Link>
         <button onClick={onReset} className="clay-btn-secondary text-sm">
           Use another account

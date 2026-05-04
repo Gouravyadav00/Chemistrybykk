@@ -1,5 +1,6 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -288,11 +289,12 @@ function NewDoubtForm({
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [att, setAtt] = useState<{
-    dataUrl: string;
+    url: string;
     name: string;
     size: number;
     kind: "image" | "pdf";
   } | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -308,18 +310,23 @@ function NewDoubtForm({
       setError("Only PDFs or images are allowed.");
       return;
     }
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-    setAtt({
-      dataUrl,
-      name: file.name,
-      size: file.size,
-      kind: isPdf ? "pdf" : "image",
-    });
+    setUploading(true);
+    try {
+      const blob = await upload(`doubts/${file.name}`, file, {
+        access: "public",
+        handleUploadUrl: "/api/blob/upload",
+      });
+      setAtt({
+        url: blob.url,
+        name: file.name,
+        size: file.size,
+        kind: isPdf ? "pdf" : "image",
+      });
+    } catch (e) {
+      setError((e as Error).message ?? "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const submit = async () => {
@@ -393,11 +400,20 @@ function NewDoubtForm({
         </div>
       ) : (
         <label className="clay-btn-secondary text-xs cursor-pointer inline-flex mb-3">
-          <Paperclip size={14} /> Attach screenshot or PDF
+          {uploading ? (
+            <>
+              <Loader2 size={14} className="animate-spin" /> Uploading…
+            </>
+          ) : (
+            <>
+              <Paperclip size={14} /> Attach screenshot or PDF
+            </>
+          )}
           <input
             type="file"
             accept="application/pdf,image/*"
             className="hidden"
+            disabled={uploading}
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) onPickFile(f);
@@ -414,7 +430,7 @@ function NewDoubtForm({
       <div className="flex flex-wrap gap-2">
         <button
           onClick={submit}
-          disabled={submitting}
+          disabled={submitting || uploading}
           className="clay-btn-primary text-sm disabled:opacity-50"
         >
           {submitting ? (

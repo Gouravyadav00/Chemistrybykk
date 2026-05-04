@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { kv } from "./kv";
 
 export type DoubtAttachment = {
-  dataUrl: string;
+  url: string;
   name: string;
   kind: "image" | "pdf";
   size: number;
@@ -200,16 +200,31 @@ export function unreadFor(
 }
 
 export function validateAttachment(att: {
-  dataUrl: string;
+  url: string;
   name: string;
   size: number;
+  kind?: string;
 }): DoubtAttachment | null {
-  if (!att?.dataUrl?.startsWith("data:")) return null;
+  if (!att?.url) return null;
+  if (typeof att.size !== "number" || att.size <= 0) return null;
   if (att.size > MAX_ATTACHMENT_BYTES) return null;
-  const mime = att.dataUrl.slice(5, att.dataUrl.indexOf(";"));
+  // URLs from our Blob store
+  if (!/^https:\/\/[\w.-]+\.public\.blob\.vercel-storage\.com\//.test(att.url)) {
+    return null;
+  }
+  const ext = att.url.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
   let kind: "image" | "pdf";
-  if (mime === "application/pdf") kind = "pdf";
-  else if (mime.startsWith("image/")) kind = "image";
+  if (att.kind === "pdf" || ext === "pdf") kind = "pdf";
+  else if (
+    att.kind === "image" ||
+    ["png", "jpg", "jpeg", "webp", "gif"].includes(ext)
+  )
+    kind = "image";
   else return null;
-  return { dataUrl: att.dataUrl, name: att.name, size: att.size, kind };
+  return {
+    url: att.url,
+    name: String(att.name ?? "attachment").slice(0, 200),
+    size: att.size,
+    kind,
+  };
 }

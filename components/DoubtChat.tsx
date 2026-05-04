@@ -1,5 +1,6 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -13,7 +14,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 type Attachment = {
-  dataUrl: string;
+  url: string;
   name: string;
   size: number;
   kind: "image" | "pdf";
@@ -56,6 +57,7 @@ export default function DoubtChat({
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [att, setAtt] = useState<Attachment | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -100,18 +102,23 @@ export default function DoubtChat({
       setError("Only PDFs or images are allowed.");
       return;
     }
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-    setAtt({
-      dataUrl,
-      name: file.name,
-      size: file.size,
-      kind: isPdf ? "pdf" : "image",
-    });
+    setUploading(true);
+    try {
+      const blob = await upload(`doubts/${file.name}`, file, {
+        access: "public",
+        handleUploadUrl: "/api/blob/upload",
+      });
+      setAtt({
+        url: blob.url,
+        name: file.name,
+        size: file.size,
+        kind: isPdf ? "pdf" : "image",
+      });
+    } catch (e) {
+      setError((e as Error).message ?? "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const send = async () => {
@@ -224,11 +231,16 @@ export default function DoubtChat({
         )}
         <div className="flex items-end gap-2">
           <label className="clay-sm w-11 h-11 grid place-items-center cursor-pointer flex-shrink-0">
-            <Paperclip size={16} />
+            {uploading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Paperclip size={16} />
+            )}
             <input
               type="file"
               className="hidden"
               accept="application/pdf,image/*"
+              disabled={uploading}
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) onPickFile(f);
@@ -253,7 +265,7 @@ export default function DoubtChat({
           />
           <button
             onClick={send}
-            disabled={sending || (!text.trim() && !att)}
+            disabled={sending || uploading || (!text.trim() && !att)}
             className="clay-btn-primary px-4 py-3 disabled:opacity-50 flex-shrink-0"
             aria-label="Send"
           >
@@ -317,14 +329,14 @@ function AttachmentBlock({ att }: { att: Attachment }) {
   if (att.kind === "image") {
     return (
       <a
-        href={att.dataUrl}
+        href={att.url}
         target="_blank"
         rel="noreferrer"
         className="block mb-1.5"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={att.dataUrl}
+          src={att.url}
           alt={att.name}
           className="rounded-xl max-h-64 object-contain bg-black/5"
         />
@@ -333,7 +345,7 @@ function AttachmentBlock({ att }: { att: Attachment }) {
   }
   return (
     <a
-      href={att.dataUrl}
+      href={att.url}
       target="_blank"
       rel="noreferrer"
       download={att.name}

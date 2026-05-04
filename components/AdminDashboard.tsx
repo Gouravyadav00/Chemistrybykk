@@ -6,12 +6,14 @@ import {
   FileText,
   LogOut,
   MessageCircleQuestion,
+  Star,
   Trash2,
   Upload,
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminDoubts from "./AdminDoubts";
+import AdminTestimonials from "./AdminTestimonials";
 import {
   classes,
   defaultCheatsheetPath,
@@ -27,18 +29,24 @@ import {
 } from "@/lib/notesStore";
 import StudentsAnalytics from "./StudentsAnalytics";
 
-type Tab = "library" | "students" | "doubts";
+type Tab = "library" | "students" | "doubts" | "testimonials";
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("library");
   const [doubtBadge, setDoubtBadge] = useState(0);
+  const [pendingTes, setPendingTes] = useState(0);
 
   useEffect(() => {
-    const load = () =>
+    const load = () => {
       fetch("/api/doubts/unread")
         .then((r) => r.json())
         .then((d) => setDoubtBadge(d.unread ?? 0))
         .catch(() => {});
+      fetch("/api/admin/testimonials")
+        .then((r) => r.json())
+        .then((d) => setPendingTes(d.counts?.pending ?? 0))
+        .catch(() => {});
+    };
     load();
     const t = setInterval(load, 30_000);
     return () => clearInterval(t);
@@ -80,14 +88,23 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           label="Doubts"
           badge={doubtBadge}
         />
+        <TabBtn
+          active={tab === "testimonials"}
+          onClick={() => setTab("testimonials")}
+          icon={<Star size={14} />}
+          label="Testimonials"
+          badge={pendingTes}
+        />
       </div>
 
       {tab === "library" ? (
         <LibraryTab />
       ) : tab === "students" ? (
         <StudentsAnalytics />
-      ) : (
+      ) : tab === "doubts" ? (
         <AdminDoubts />
+      ) : (
+        <AdminTestimonials />
       )}
     </div>
   );
