@@ -1,17 +1,21 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import { motion } from "framer-motion";
 import {
   BarChart3,
+  Download,
   FileText,
+  Loader2,
   LogOut,
+  Map,
   MessageCircleQuestion,
   Star,
   Trash2,
-  Upload,
+  Upload as UploadIcon,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AdminDoubts from "./AdminDoubts";
 import AdminTestimonials from "./AdminTestimonials";
 import {
@@ -22,10 +26,11 @@ import {
   type Chapter,
 } from "@/data/chapters";
 import {
-  clearChapterAsset,
-  fileToDataUrl,
+  fetchAssetMap,
+  getRoadmap,
   resolveClass,
-  setChapterAsset,
+  ROADMAP_DEFAULTS,
+  type AssetMap,
 } from "@/lib/notesStore";
 import StudentsAnalytics from "./StudentsAnalytics";
 
@@ -147,46 +152,53 @@ function TabBtn({
 
 function LibraryTab() {
   const [activeId, setActiveId] = useState("12");
-  const [data, setData] = useState(resolveClass(activeId));
-  const [, force] = useState(0);
+  const [assets, setAssets] = useState<AssetMap>({});
+  const [data, setData] = useState(resolveClass(activeId, {}));
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    const map = await fetchAssetMap();
+    setAssets(map);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    setData(resolveClass(activeId));
-  }, [activeId]);
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
-    const handler = () => {
-      setData(resolveClass(activeId));
-      force((n) => n + 1);
-    };
-    window.addEventListener("cbk:notes-changed", handler);
-    return () => window.removeEventListener("cbk:notes-changed", handler);
-  }, [activeId]);
+    setData(resolveClass(activeId, assets));
+  }, [activeId, assets]);
 
   const onUpload = async (slug: string, kind: AssetKind, file: File) => {
-    const dataUrl = await fileToDataUrl(file);
-    setChapterAsset(activeId, slug, kind, {
-      available: true,
-      file: dataUrl,
-      fileName: file.name,
-      isLocal: true,
-    });
-  };
-
-  const toggleAvail = (
-    slug: string,
-    kind: AssetKind,
-    current: boolean,
-    file?: string,
-  ) => {
-    setChapterAsset(activeId, slug, kind, {
-      available: !current,
+    const blob = await upload(
+      `library/class${activeId}/${kind}/${slug}-${file.name}`,
       file,
+      { access: "public", handleUploadUrl: "/api/blob/upload" },
+    );
+    const res = await fetch("/api/admin/assets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind,
+        classId: activeId,
+        slug,
+        url: blob.url,
+        fileName: file.name,
+        size: file.size,
+      }),
     });
+    if (!res.ok) throw new Error("Failed to register asset");
+    await refresh();
   };
 
-  const removeAsset = (slug: string, kind: AssetKind) => {
-    clearChapterAsset(activeId, slug, kind);
+  const removeAsset = async (slug: string, kind: AssetKind) => {
+    if (!confirm(`Remove this ${kind}? The file will be deleted.`)) return;
+    await fetch(
+      `/api/admin/assets?kind=${kind}&classId=${activeId}&slug=${encodeURIComponent(slug)}`,
+      { method: "DELETE" },
+    );
+    await refresh();
   };
 
   const totalNotes = data?.chapters.filter((c) => c.notesAvailable).length ?? 0;
@@ -195,10 +207,7 @@ function LibraryTab() {
   const total = data?.chapters.length ?? 0;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <div className="flex flex-wrap gap-2 mb-6">
         {classes.map((c) => {
           const active = c.classId === activeId;
@@ -235,34 +244,168 @@ function LibraryTab() {
         />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4">
-        {data?.chapters.map((ch) => (
-          <ChapterRow
-            key={ch.slug}
-            chapter={ch}
-            classId={activeId}
-            onUpload={onUpload}
-            onToggle={toggleAvail}
-            onRemove={removeAsset}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="clay p-10 text-center text-clay-muted">
+          <Loader2 className="mx-auto animate-spin" />
+        </div>
+      ) : (
+        <div className="grid lg:grid-cols-2 gap-4">
+          {data?.chapters.map((ch) => (
+            <ChapterRow
+              key={ch.slug}
+              chapter={ch}
+              classId={activeId}
+              onUpload={onUpload}
+              onRemove={removeAsset}
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="clay-inset mt-8 p-5 text-xs text-clay-muted leading-relaxed">
-        <strong className="text-clay-ink dark:text-white">Note:</strong> Uploads
-        from this browser-only admin are stored locally (in your browser). For
-        files that should be available to every visitor, drop them at{" "}
-        <code className="text-clay-accent">
-          /public/notes/class&lt;X&gt;/&lt;slug&gt;.pdf
-        </code>{" "}
-        for notes and{" "}
-        <code className="text-clay-accent">
-          /public/notes/class&lt;X&gt;/&lt;slug&gt;.cheatsheet.pdf
-        </code>{" "}
-        for cheatsheets — then redeploy. PNG/JPG cheatsheets work too via the
-        upload above.
+      <RoadmapAdmin assets={assets} onChange={refresh} />
+
+      <div className="clay-inset mt-6 p-5 text-xs text-clay-muted leading-relaxed">
+        <strong className="text-clay-ink dark:text-white">How it works:</strong>{" "}
+        Uploads go straight to Vercel Blob storage and are visible to every
+        student instantly — no redeploy needed. Removing a file deletes both
+        the registry entry and the underlying Blob.
       </div>
     </motion.div>
+  );
+}
+
+function RoadmapAdmin({
+  assets,
+  onChange,
+}: {
+  assets: AssetMap;
+  onChange: () => Promise<void> | void;
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const upload2 = async (classId: string, file: File) => {
+    setBusy(classId);
+    try {
+      const blob = await upload(
+        `roadmaps/class${classId}-${file.name}`,
+        file,
+        { access: "public", handleUploadUrl: "/api/blob/upload" },
+      );
+      await fetch("/api/admin/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "roadmap",
+          classId,
+          url: blob.url,
+          fileName: file.name,
+          size: file.size,
+        }),
+      });
+      await onChange();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const remove2 = async (classId: string) => {
+    if (!confirm("Reset this roadmap to the built-in default?")) return;
+    setBusy(classId);
+    try {
+      await fetch(
+        `/api/admin/assets?kind=roadmap&classId=${classId}`,
+        { method: "DELETE" },
+      );
+      await onChange();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="clay p-5 mt-6">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-300 grid place-items-center text-emerald-700 shadow-clay-sm">
+          <Map size={16} />
+        </div>
+        <div>
+          <h3 className="display font-extrabold text-clay-ink dark:text-white">
+            Roadmaps
+          </h3>
+          <p className="text-xs text-clay-muted">
+            One per class — visible in the Learning Hub and as a welcome bonus.
+          </p>
+        </div>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        {(["9", "10", "11", "12"] as const).map((c) => {
+          const r = getRoadmap(c, assets);
+          return (
+            <div key={c} className="clay-sm p-3">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div>
+                  <div className="font-bold text-sm text-clay-ink dark:text-white">
+                    Class {c}
+                  </div>
+                  <div className="text-[10px] text-clay-muted">
+                    {r.isOverride ? "Custom (Blob)" : "Built-in default"}
+                  </div>
+                </div>
+                {r.url && (
+                  <a
+                    href={r.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="clay-sm w-8 h-8 grid place-items-center text-clay-accent"
+                    aria-label="Preview"
+                  >
+                    <Download size={12} />
+                  </a>
+                )}
+              </div>
+              {r.url && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={r.url}
+                  alt={`Class ${c} roadmap`}
+                  className="w-full h-24 object-cover rounded-xl bg-white/60 mb-2"
+                />
+              )}
+              <div className="flex flex-wrap gap-2">
+                <label className="clay-btn-secondary text-xs cursor-pointer flex-1">
+                  {busy === c ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <UploadIcon size={12} />
+                  )}
+                  {r.isOverride ? "Replace" : "Upload"}
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    disabled={busy === c}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) upload2(c, f);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+                {r.isOverride && (
+                  <button
+                    onClick={() => remove2(c)}
+                    disabled={busy === c}
+                    className="clay-btn-secondary text-xs text-red-500"
+                  >
+                    <Trash2 size={12} /> Reset
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -304,19 +447,12 @@ function ChapterRow({
   chapter: ch,
   classId,
   onUpload,
-  onToggle,
   onRemove,
 }: {
   chapter: Chapter;
   classId: string;
-  onUpload: (slug: string, kind: AssetKind, file: File) => void;
-  onToggle: (
-    slug: string,
-    kind: AssetKind,
-    current: boolean,
-    file?: string,
-  ) => void;
-  onRemove: (slug: string, kind: AssetKind) => void;
+  onUpload: (slug: string, kind: AssetKind, file: File) => Promise<void>;
+  onRemove: (slug: string, kind: AssetKind) => Promise<void>;
 }) {
   return (
     <div className="clay p-5">
@@ -343,7 +479,6 @@ function ChapterRow({
         defaultPath={defaultNotesPath(classId, ch.slug)}
         slug={ch.slug}
         onUpload={onUpload}
-        onToggle={onToggle}
         onRemove={onRemove}
       />
 
@@ -358,7 +493,6 @@ function ChapterRow({
         defaultPath={defaultCheatsheetPath(classId, ch.slug)}
         slug={ch.slug}
         onUpload={onUpload}
-        onToggle={onToggle}
         onRemove={onRemove}
       />
     </div>
@@ -374,7 +508,6 @@ function AssetSection({
   defaultPath,
   slug,
   onUpload,
-  onToggle,
   onRemove,
 }: {
   kind: AssetKind;
@@ -384,20 +517,35 @@ function AssetSection({
   file?: string;
   defaultPath: string;
   slug: string;
-  onUpload: (slug: string, kind: AssetKind, file: File) => void;
-  onToggle: (
-    slug: string,
-    kind: AssetKind,
-    current: boolean,
-    file?: string,
-  ) => void;
-  onRemove: (slug: string, kind: AssetKind) => void;
+  onUpload: (slug: string, kind: AssetKind, file: File) => Promise<void>;
+  onRemove: (slug: string, kind: AssetKind) => Promise<void>;
 }) {
   const isCheat = kind === "cheatsheet";
   const tone = isCheat
     ? "bg-amber-100 text-orange-700"
     : "bg-blue-100 text-clay-accentDeep";
   const Icon = isCheat ? Zap : FileText;
+  const [busy, setBusy] = useState(false);
+
+  const isBlob = file?.includes(".blob.vercel-storage.com");
+
+  const handleUpload = async (f: File) => {
+    setBusy(true);
+    try {
+      await onUpload(slug, kind, f);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    setBusy(true);
+    try {
+      await onRemove(slug, kind);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div>
@@ -416,43 +564,41 @@ function AssetSection({
             available ? tone : "bg-orange-100 text-orange-600"
           }`}
         >
-          {available ? "Live" : "Hidden"}
+          {available ? (isBlob ? "Live · Blob" : "Default") : "Coming Soon"}
         </span>
       </div>
       <div className="text-[11px] text-clay-muted truncate mb-2.5">
-        {file
-          ? file.startsWith("data:")
-            ? "Uploaded (browser-stored)"
-            : file
-          : defaultPath}
+        {file ?? defaultPath}
       </div>
       <div className="flex flex-wrap gap-2">
         <label className="clay-btn-secondary text-xs py-2 px-3 cursor-pointer">
-          <Upload size={14} />
-          {available ? "Replace" : "Upload"}
+          {busy ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <UploadIcon size={14} />
+          )}
+          {isBlob ? "Replace" : "Upload"}
           <input
             type="file"
             accept={accept}
             className="hidden"
+            disabled={busy}
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) onUpload(slug, kind, f);
+              if (f) handleUpload(f);
               e.currentTarget.value = "";
             }}
           />
         </label>
-        <button
-          onClick={() => onToggle(slug, kind, available, file)}
-          className="clay-btn-secondary text-xs py-2 px-3"
-        >
-          {available ? "Hide" : "Mark Available"}
-        </button>
-        <button
-          onClick={() => onRemove(slug, kind)}
-          className="clay-btn-secondary text-xs py-2 px-3 text-red-500"
-        >
-          <Trash2 size={14} /> Delete
-        </button>
+        {isBlob && (
+          <button
+            onClick={handleRemove}
+            disabled={busy}
+            className="clay-btn-secondary text-xs py-2 px-3 text-red-500"
+          >
+            <Trash2 size={14} /> Delete
+          </button>
+        )}
       </div>
     </div>
   );

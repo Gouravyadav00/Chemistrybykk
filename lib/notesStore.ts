@@ -2,115 +2,58 @@
 
 import {
   classes,
-  defaultCheatsheetPath,
-  defaultNotesPath,
-  type AssetKind,
   type Chapter,
+  type ClassData,
 } from "@/data/chapters";
+import { assetIdFor, type AssetMap } from "@/lib/assets";
 
-type AssetOverride = {
-  available: boolean;
-  file?: string;
-  fileName?: string;
-  isLocal?: boolean;
-  updatedAt?: number;
+export type { AssetMap };
+
+export const ROADMAP_DEFAULTS: Record<string, string> = {
+  "9": "/images/Class 9th Roadmap Cheatsheet.png",
+  "10": "/images/Class 10th Roadmap Cheatsheet.png",
+  "11": "/images/Class 11th Roadmap Cheatsheet.png",
+  "12": "/images/Class 12th Roadmap Cheatsheet.png",
 };
 
-type ChapterOverride = {
-  notes?: AssetOverride;
-  cheatsheet?: AssetOverride;
-};
-
-type Store = Record<string, Record<string, ChapterOverride>>;
-
-const STORE_KEY = "cbk:notes-store-v2";
-
-const isClient = () => typeof window !== "undefined";
-
-export function readStore(): Store {
-  if (!isClient()) return {};
-  try {
-    return JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-export function writeStore(store: Store) {
-  if (!isClient()) return;
-  localStorage.setItem(STORE_KEY, JSON.stringify(store));
-  window.dispatchEvent(new CustomEvent("cbk:notes-changed"));
-}
-
-export function setChapterAsset(
+export function applyChapterOverrides(
   classId: string,
-  slug: string,
-  kind: AssetKind,
-  override: AssetOverride,
-) {
-  const store = readStore();
-  if (!store[classId]) store[classId] = {};
-  if (!store[classId][slug]) store[classId][slug] = {};
-  store[classId][slug][kind] = { ...override, updatedAt: Date.now() };
-  writeStore(store);
+  chapter: Chapter,
+  assets: AssetMap,
+): Chapter {
+  const notes = assets[assetIdFor("notes", classId, chapter.slug)];
+  const cheat = assets[assetIdFor("cheatsheet", classId, chapter.slug)];
+  return {
+    ...chapter,
+    notesAvailable: notes ? true : chapter.notesAvailable,
+    file: notes?.url ?? chapter.file,
+    cheatsheetAvailable: cheat ? true : chapter.cheatsheetAvailable,
+    cheatsheet: cheat?.url ?? chapter.cheatsheet,
+  };
 }
 
-export function clearChapterAsset(
+export function resolveClass(
   classId: string,
-  slug: string,
-  kind: AssetKind,
-) {
-  const store = readStore();
-  const chapter = store[classId]?.[slug];
-  if (!chapter) return;
-  delete chapter[kind];
-  if (!chapter.notes && !chapter.cheatsheet) {
-    delete store[classId][slug];
-  }
-  writeStore(store);
-}
-
-export function clearChapter(classId: string, slug: string) {
-  const store = readStore();
-  if (store[classId]) {
-    delete store[classId][slug];
-    writeStore(store);
-  }
-}
-
-export function resolveChapter(classId: string, chapter: Chapter): Chapter {
-  if (!isClient()) return chapter;
-  const store = readStore();
-  const ov = store[classId]?.[chapter.slug];
-  if (!ov) return chapter;
-
-  let next = { ...chapter };
-  if (ov.notes) {
-    next.notesAvailable = ov.notes.available;
-    next.file =
-      ov.notes.file ?? next.file ?? defaultNotesPath(classId, chapter.slug);
-  }
-  if (ov.cheatsheet) {
-    next.cheatsheetAvailable = ov.cheatsheet.available;
-    next.cheatsheet =
-      ov.cheatsheet.file ??
-      next.cheatsheet ??
-      defaultCheatsheetPath(classId, chapter.slug);
-  }
-  return next;
-}
-
-export function resolveClass(classId: string) {
+  assets: AssetMap = {},
+): (ClassData & { chapters: Chapter[] }) | null {
   const cls = classes.find((c) => c.classId === classId);
   if (!cls) return null;
   return {
     ...cls,
-    chapters: cls.chapters.map((ch) => resolveChapter(classId, ch)),
+    chapters: cls.chapters.map((ch) =>
+      applyChapterOverrides(classId, ch, assets),
+    ),
   };
 }
 
-// Auth + subscriber data are server-side now (see app/api/auth + lib/subscribers.ts).
-// Only library-management state (PDF/cheatsheet uploads in admin browser) lives here.
+export function getRoadmap(
+  classId: string,
+  assets: AssetMap = {},
+): { url: string; isOverride: boolean; fileName?: string } {
+  const entry = assets[assetIdFor("roadmap", classId)];
+  if (entry) return { url: entry.url, isOverride: true, fileName: entry.fileName };
+  return { url: ROADMAP_DEFAULTS[classId] ?? "", isOverride: false };
+}
 
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -119,4 +62,15 @@ export function fileToDataUrl(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+export async function fetchAssetMap(): Promise<AssetMap> {
+  try {
+    const res = await fetch("/api/assets", { cache: "no-store" });
+    if (!res.ok) return {};
+    const data = await res.json();
+    return (data?.assets as AssetMap) ?? {};
+  } catch {
+    return {};
+  }
 }

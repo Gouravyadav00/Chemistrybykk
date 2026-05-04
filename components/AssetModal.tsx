@@ -69,6 +69,7 @@ export default function AssetModal({
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 bg-clay-ink/40 dark:bg-black/60 backdrop-blur-sm grid place-items-center p-2 sm:p-6 overflow-y-auto"
           onClick={onClose}
+          aria-label="Click outside to close"
         >
           <motion.div
             initial={{ scale: 0.92, y: 20, rotateY: -8 }}
@@ -129,10 +130,15 @@ export default function AssetModal({
                   onClick={onClose}
                   className="clay-sm w-9 h-9 sm:w-10 sm:h-10 grid place-items-center"
                   aria-label="Close"
+                  title="Close (Esc)"
                 >
                   <X size={16} />
                 </button>
               </div>
+            </div>
+
+            <div className="hidden sm:block absolute bottom-3 left-1/2 -translate-x-1/2 text-clay-muted text-[10px] font-medium px-3 py-1 rounded-full bg-white/80 dark:bg-black/40 pointer-events-none">
+              Press Esc or click outside to close
             </div>
 
             {/* body */}

@@ -2,14 +2,20 @@
 
 import { motion } from "framer-motion";
 import { Download, Eye, Gift, Map } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  fetchAssetMap,
+  getRoadmap,
+  ROADMAP_DEFAULTS,
+  type AssetMap,
+} from "@/lib/notesStore";
 
-const roadmaps = [
-  { classId: "9", file: "/images/Class 9th Roadmap Cheatsheet.png", label: "Class 9" },
-  { classId: "10", file: "/images/Class 10th Roadmap Cheatsheet.png", label: "Class 10" },
-  { classId: "11", file: "/images/Class 11th Roadmap Cheatsheet.png", label: "Class 11" },
-  { classId: "12", file: "/images/Class 12th Roadmap Cheatsheet.png", label: "Class 12" },
-];
+const labels: Record<string, string> = {
+  "9": "Class 9",
+  "10": "Class 10",
+  "11": "Class 11",
+  "12": "Class 12",
+};
 
 export default function RoadmapBonus({
   preferredClass,
@@ -17,11 +23,26 @@ export default function RoadmapBonus({
   preferredClass?: string;
 }) {
   const initial =
-    roadmaps.find((r) => r.classId === preferredClass)?.classId ?? "12";
+    preferredClass && ROADMAP_DEFAULTS[preferredClass] ? preferredClass : "12";
   const [active, setActive] = useState(initial);
   const [open, setOpen] = useState(false);
+  const [assets, setAssets] = useState<AssetMap>({});
 
-  const current = roadmaps.find((r) => r.classId === active) ?? roadmaps[3];
+  useEffect(() => {
+    fetchAssetMap().then(setAssets);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const { url: currentUrl, fileName } = getRoadmap(active, assets);
+  const currentLabel = labels[active] ?? `Class ${active}`;
 
   return (
     <motion.div
@@ -45,17 +66,17 @@ export default function RoadmapBonus({
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        {roadmaps.map((r) => (
+        {Object.keys(labels).map((c) => (
           <button
-            key={r.classId}
-            onClick={() => setActive(r.classId)}
+            key={c}
+            onClick={() => setActive(c)}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${
-              active === r.classId
+              active === c
                 ? "clay-btn-primary"
                 : "clay-btn-secondary text-clay-ink dark:text-white"
             }`}
           >
-            {r.label}
+            {labels[c]}
           </button>
         ))}
       </div>
@@ -63,8 +84,8 @@ export default function RoadmapBonus({
       <div className="rounded-2xl overflow-hidden bg-white/70 dark:bg-white/5 shadow-clay-inset p-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={current.file}
-          alt={`${current.label} roadmap`}
+          src={currentUrl}
+          alt={`${currentLabel} roadmap`}
           className="w-full h-auto rounded-xl object-contain max-h-[420px]"
           onClick={() => setOpen(true)}
           style={{ cursor: "zoom-in" }}
@@ -79,8 +100,8 @@ export default function RoadmapBonus({
           <Eye size={12} /> View full size
         </button>
         <a
-          href={current.file}
-          download={`${current.label} Roadmap.png`}
+          href={currentUrl}
+          download={fileName ?? `${currentLabel} Roadmap.png`}
           className="clay-btn-primary text-xs"
         >
           <Download size={12} /> Download
@@ -94,16 +115,19 @@ export default function RoadmapBonus({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 bg-black/80 grid place-items-center p-4 cursor-zoom-out"
+          className="fixed inset-0 z-50 bg-black/85 grid place-items-center p-4 cursor-zoom-out"
           onClick={() => setOpen(false)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={current.file}
-            alt={`${current.label} roadmap`}
+            src={currentUrl}
+            alt={`${currentLabel} roadmap`}
             className="max-w-full max-h-full object-contain rounded-xl"
             onClick={(e) => e.stopPropagation()}
           />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-xs font-medium px-3 py-1.5 rounded-full bg-black/40">
+            Press Esc or click outside to close
+          </div>
         </motion.div>
       )}
     </motion.div>

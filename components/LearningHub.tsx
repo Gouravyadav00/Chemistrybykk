@@ -6,8 +6,10 @@ import {
   CheckCircle2,
   Circle,
   Download,
+  Eye,
   FileText,
   Layers,
+  Map,
   Search,
   Sparkles,
   Zap,
@@ -23,40 +25,50 @@ import {
   type AssetKind,
   type Chapter,
 } from "@/data/chapters";
-import { resolveClass } from "@/lib/notesStore";
+import {
+  fetchAssetMap,
+  getRoadmap,
+  resolveClass,
+  type AssetMap,
+} from "@/lib/notesStore";
 import AssetModal from "./AssetModal";
 
 type ResolvedClass = ReturnType<typeof resolveClass>;
+type HubKind = AssetKind | "roadmap";
 
 export default function LearningHub() {
   const [activeId, setActiveId] = useState<string>("12");
-  const [kind, setKind] = useState<AssetKind>("notes");
+  const [kind, setKind] = useState<HubKind>("notes");
+  const [assets, setAssets] = useState<AssetMap>({});
   const [resolved, setResolved] = useState<ResolvedClass | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<{ chapter: Chapter; kind: AssetKind } | null>(
     null,
   );
-  const [, force] = useState(0);
+  const [zoomRoadmap, setZoomRoadmap] = useState(false);
 
   useEffect(() => {
-    setResolved(resolveClass(activeId));
-    setSelected(new Set());
-  }, [activeId]);
+    fetchAssetMap().then(setAssets);
+  }, []);
 
-  // also clear selection when toggling notes/cheatsheet
+  useEffect(() => {
+    setResolved(resolveClass(activeId, assets));
+    setSelected(new Set());
+  }, [activeId, assets]);
+
   useEffect(() => {
     setSelected(new Set());
   }, [kind]);
 
   useEffect(() => {
-    const handler = () => {
-      setResolved(resolveClass(activeId));
-      force((n) => n + 1);
+    if (!zoomRoadmap) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setZoomRoadmap(false);
     };
-    window.addEventListener("cbk:notes-changed", handler);
-    return () => window.removeEventListener("cbk:notes-changed", handler);
-  }, [activeId]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoomRoadmap]);
 
   const chapters = useMemo(() => {
     if (!resolved) return [];
@@ -65,8 +77,9 @@ export default function LearningHub() {
     return resolved.chapters.filter((c) => c.name.toLowerCase().includes(q));
   }, [resolved, search]);
 
+  const chapterKind: AssetKind = kind === "roadmap" ? "notes" : kind;
   const allAvailable = resolved?.chapters.every((c) =>
-    getAssetAvailable(c, kind),
+    getAssetAvailable(c, chapterKind),
   );
 
   const toggleSelect = (slug: string) => {
@@ -80,8 +93,8 @@ export default function LearningHub() {
 
   const downloadOne = (ch: Chapter) => {
     const src =
-      getAssetSrc(ch, kind) ??
-      (kind === "notes"
+      getAssetSrc(ch, chapterKind) ??
+      (chapterKind === "notes"
         ? defaultNotesPath(activeId, ch.slug)
         : defaultCheatsheetPath(activeId, ch.slug));
     const ext = isImageSrc(src)
@@ -89,7 +102,7 @@ export default function LearningHub() {
       : ".pdf";
     const a = document.createElement("a");
     a.href = src;
-    a.download = `${ch.slug}${kind === "cheatsheet" ? "-cheatsheet" : ""}${ext}`;
+    a.download = `${ch.slug}${chapterKind === "cheatsheet" ? "-cheatsheet" : ""}${ext}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -98,14 +111,14 @@ export default function LearningHub() {
   const downloadSelected = () => {
     if (!resolved) return;
     resolved.chapters
-      .filter((c) => selected.has(c.slug) && getAssetAvailable(c, kind))
+      .filter((c) => selected.has(c.slug) && getAssetAvailable(c, chapterKind))
       .forEach((c, i) => setTimeout(() => downloadOne(c), i * 250));
   };
 
   const downloadBundle = () => {
     if (!resolved) return;
     resolved.chapters
-      .filter((c) => getAssetAvailable(c, kind))
+      .filter((c) => getAssetAvailable(c, chapterKind))
       .forEach((c, i) => setTimeout(() => downloadOne(c), i * 250));
   };
 
@@ -144,9 +157,9 @@ export default function LearningHub() {
         })}
       </div>
 
-      {/* notes / cheatsheet switch */}
+      {/* notes / cheatsheet / roadmap switch */}
       <div className="flex justify-center mb-6">
-        <div className="clay-inset p-1.5 inline-flex items-center gap-1 rounded-2xl">
+        <div className="clay-inset p-1.5 inline-flex items-center gap-1 rounded-2xl flex-wrap">
           <SwitchTab
             active={kind === "notes"}
             onClick={() => setKind("notes")}
@@ -160,9 +173,24 @@ export default function LearningHub() {
             label="Cheatsheets"
             tone="warm"
           />
+          <SwitchTab
+            active={kind === "roadmap"}
+            onClick={() => setKind("roadmap")}
+            icon={<Map size={14} />}
+            label="Roadmaps"
+            tone="emerald"
+          />
         </div>
       </div>
 
+      {kind === "roadmap" ? (
+        <RoadmapView
+          classId={activeId}
+          assets={assets}
+          onZoom={() => setZoomRoadmap(true)}
+        />
+      ) : (
+      <>
       {/* search + actions */}
       <div className="clay p-4 sm:p-5 mb-6 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
         <div className="clay-inset flex items-center gap-2 px-4 py-3 flex-1 md:max-w-md">
@@ -194,7 +222,7 @@ export default function LearningHub() {
           >
             <Sparkles size={16} />
             <span className="whitespace-nowrap">
-              Full {kind === "cheatsheet" ? "Cheatsheet" : "Notes"} Bundle
+              Full {chapterKind === "cheatsheet" ? "Cheatsheet" : "Notes"} Bundle
             </span>
           </button>
         </div>
@@ -203,7 +231,7 @@ export default function LearningHub() {
       {/* chapter grid */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={activeId + kind + search}
+          key={activeId + chapterKind + search}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
@@ -214,7 +242,7 @@ export default function LearningHub() {
             const isSel = selected.has(ch.slug);
             const notesOk = ch.notesAvailable;
             const cheatOk = ch.cheatsheetAvailable;
-            const activeAvail = kind === "notes" ? notesOk : cheatOk;
+            const activeAvail = chapterKind === "notes" ? notesOk : cheatOk;
             return (
               <motion.div
                 key={ch.slug}
@@ -222,17 +250,17 @@ export default function LearningHub() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
                 className="clay p-5 group hover:-translate-y-1 transition-transform cursor-pointer"
-                onClick={() => setOpen({ chapter: ch, kind })}
+                onClick={() => setOpen({ chapter: ch, kind: chapterKind })}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div
                     className={`w-11 h-11 rounded-2xl grid place-items-center shadow-clay-sm ${
-                      kind === "cheatsheet"
+                      chapterKind === "cheatsheet"
                         ? "bg-gradient-to-br from-amber-100 to-orange-200 text-orange-600"
                         : "bg-gradient-to-br from-blue-100 to-blue-300 text-clay-accentDeep"
                     }`}
                   >
-                    {kind === "cheatsheet" ? (
+                    {chapterKind === "cheatsheet" ? (
                       <Zap size={18} />
                     ) : (
                       <BookOpen size={18} />
@@ -257,14 +285,14 @@ export default function LearningHub() {
                   <span
                     className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                       activeAvail
-                        ? kind === "cheatsheet"
+                        ? chapterKind === "cheatsheet"
                           ? "bg-amber-100 text-orange-700"
                           : "bg-blue-100 text-clay-accentDeep"
                         : "bg-orange-100 text-orange-600"
                     }`}
                   >
                     {activeAvail
-                      ? kind === "cheatsheet"
+                      ? chapterKind === "cheatsheet"
                         ? "Cheatsheet Ready"
                         : "Notes Ready"
                       : "Coming Soon"}
@@ -278,7 +306,7 @@ export default function LearningHub() {
                       className="text-clay-accent hover:text-clay-accentDeep flex items-center gap-1 text-sm font-semibold"
                     >
                       <Download size={14} />{" "}
-                      {kind === "cheatsheet" ? "Sheet" : "PDF"}
+                      {chapterKind === "cheatsheet" ? "Sheet" : "PDF"}
                     </button>
                   )}
                 </div>
@@ -317,13 +345,107 @@ export default function LearningHub() {
         </motion.div>
       </AnimatePresence>
 
+      </>
+      )}
+
       <AssetModal
         chapter={open?.chapter ?? null}
         classId={activeId}
         kind={open?.kind ?? "notes"}
         onClose={() => setOpen(null)}
       />
+
+      {zoomRoadmap && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 bg-black/85 grid place-items-center p-4 cursor-zoom-out"
+          onClick={() => setZoomRoadmap(false)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={getRoadmap(activeId, assets).url}
+            alt={`Class ${activeId} roadmap`}
+            className="max-w-full max-h-full object-contain rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-xs font-medium px-3 py-1.5 rounded-full bg-black/40">
+            Press Esc or click outside to close
+          </div>
+        </motion.div>
+      )}
     </section>
+  );
+}
+
+function RoadmapView({
+  classId,
+  assets,
+  onZoom,
+}: {
+  classId: string;
+  assets: AssetMap;
+  onZoom: () => void;
+}) {
+  const { url, isOverride, fileName } = getRoadmap(classId, assets);
+  const cls = classes.find((c) => c.classId === classId);
+
+  if (!url) {
+    return (
+      <div className="clay p-10 text-center text-clay-muted">
+        <Map className="mx-auto mb-3 text-clay-accent" size={32} />
+        <p className="text-clay-ink dark:text-white font-semibold">
+          Roadmap coming soon
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="clay p-4 sm:p-6">
+      <div className="flex items-start gap-3 mb-4 flex-wrap">
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-300 grid place-items-center text-emerald-700 shadow-clay-sm flex-shrink-0">
+          <Map size={18} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] uppercase tracking-wide text-clay-muted">
+            {cls?.label} · Syllabus Roadmap
+          </div>
+          <h3 className="display font-extrabold text-clay-ink dark:text-white">
+            Follow this order for full coverage
+          </h3>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onZoom} className="clay-btn-secondary text-xs">
+            <Eye size={12} /> Full size
+          </button>
+          <a
+            href={url}
+            download={fileName ?? `Class ${classId} Roadmap.png`}
+            className="clay-btn-primary text-xs"
+          >
+            <Download size={12} /> Download
+          </a>
+        </div>
+      </div>
+      <button
+        onClick={onZoom}
+        className="block w-full clay-inset rounded-2xl overflow-hidden bg-white dark:bg-[#0a163a] cursor-zoom-in"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={url}
+          alt={`Class ${classId} roadmap`}
+          className="w-full h-auto object-contain max-h-[70vh]"
+        />
+      </button>
+      {!isOverride && (
+        <p className="text-[10px] text-clay-muted mt-3 text-center">
+          Built-in roadmap. Khyati can replace it from the dashboard at any
+          time.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -338,12 +460,14 @@ function SwitchTab({
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
-  tone?: "blue" | "warm";
+  tone?: "blue" | "warm" | "emerald";
 }) {
   const activeClass =
     tone === "warm"
       ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-clay-sm"
-      : "clay-btn-primary";
+      : tone === "emerald"
+        ? "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-clay-sm"
+        : "clay-btn-primary";
   return (
     <button
       onClick={onClick}
