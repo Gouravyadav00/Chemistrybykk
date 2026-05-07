@@ -38,7 +38,7 @@ export const classes: ClassData[] = [
   {
     classId: "9",
     label: "Class 9",
-    subtitle: "Foundation Chemistry · CBSE / NCERT",
+    subtitle: "Foundation Chemistry · NCERT",
     chapters: [
       make("Matter in Our Surroundings"),
       make("Is Matter Around Us Pure"),
@@ -49,7 +49,7 @@ export const classes: ClassData[] = [
   {
     classId: "10",
     label: "Class 10",
-    subtitle: "Board Foundation · CBSE / NCERT",
+    subtitle: "Board Foundation · NCERT",
     chapters: [
       make("Chemical Reactions and Equations"),
       make("Acids, Bases and Salts"),
@@ -61,7 +61,7 @@ export const classes: ClassData[] = [
   {
     classId: "11",
     label: "Class 11",
-    subtitle: "Senior Secondary · CBSE / NCERT",
+    subtitle: "Senior Secondary · NCERT",
     chapters: [
       make("Some Basic Concepts of Chemistry"),
       make("Structure of Atom"),
@@ -76,7 +76,7 @@ export const classes: ClassData[] = [
   {
     classId: "12",
     label: "Class 12",
-    subtitle: "Board Year · CBSE / NCERT",
+    subtitle: "Board Year · NCERT",
     chapters: [
       make("Solid State"),
       make("Solutions"),

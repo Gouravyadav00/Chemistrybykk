@@ -23,7 +23,7 @@ const philosophy = [
     icon: Target,
     title: "Board-ready, not exam-shocked",
     body:
-      "Chapter-wise tests, focused revision and sample-paper practice keep students one step ahead of the CBSE pattern.",
+      "Chapter-wise tests, focused revision and sample-paper practice keep students one step ahead of the board pattern.",
   },
   {
     icon: Microscope,
@@ -73,7 +73,7 @@ export default function About() {
             Meet <span className="text-clay-accent">Khyati Kaushik</span>
           </h2>
           <p className="mt-4 text-clay-muted">
-            A dedicated Chemistry educator with hands-on CBSE Class 9–12
+            A dedicated Chemistry educator with hands-on Class 9–12
             teaching experience and a strong academic foundation. Skilled in
             simplifying Organic, Inorganic and Physical Chemistry to lift
             comprehension and board scores.
@@ -102,7 +102,7 @@ export default function About() {
           <div className="mt-5 grid grid-cols-2 gap-3">
             <Mini label="Experience" value="9 mo+" />
             <Mini label="Subjects" value="Org · Inorg · Phys" />
-            <Mini label="Curriculum" value="CBSE / NCERT" />
+            <Mini label="Curriculum" value="NCERT" />
             <Mini label="Based in" value="Bhiwadi, RJ" />
           </div>
         </motion.div>

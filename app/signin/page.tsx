@@ -269,7 +269,7 @@ function SignInCard({ onAdmin }: { onAdmin: () => void }) {
                   className="bg-transparent outline-none w-full text-sm text-clay-ink dark:text-white appearance-none cursor-pointer"
                 >
                   <option value="">Skip</option>
-                  <option value="CBSE Boards">CBSE Boards</option>
+                  <option value="Board Exams">Board Exams</option>
                   <option value="JEE">JEE</option>
                   <option value="NEET">NEET</option>
                   <option value="Other">Other</option>

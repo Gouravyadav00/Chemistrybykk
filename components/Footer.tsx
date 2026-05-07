@@ -11,7 +11,7 @@ export default function Footer() {
             <Logo size="lg" />
           </div>
           <p className="text-sm text-clay-muted">
-            Chemistry simplified for every CBSE student — Class 9 through 12.
+            Chemistry simplified for every student — Class 9 through 12.
             Built with love by Khyati Kaushik.
           </p>
         </div>

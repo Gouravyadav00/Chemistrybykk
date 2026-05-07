@@ -19,13 +19,13 @@ const siteUrl =
 export const metadata: Metadata = {
   title: "ChemistryByKK — Chemistry Simplified for Every Student",
   description:
-    "A learning hub for CBSE Class 9–12 students by Khyati Kaushik (M.Sc. Chemistry). Notes, chapter-wise resources, and concept clarity for board exams.",
+    "A learning hub for Class 9–12 students by Khyati Kaushik (M.Sc. Chemistry). Notes, chapter-wise resources, and concept clarity for board exams.",
   metadataBase: new URL(siteUrl),
   alternates: { canonical: "/" },
   openGraph: {
     title: "ChemistryByKK — Chemistry Simplified for Every Student",
     description:
-      "Notes, chapter-wise resources, and concept clarity for CBSE Class 9–12.",
+      "Notes, chapter-wise resources, and concept clarity for Class 9–12.",
     url: siteUrl,
     siteName: "ChemistryByKK",
     type: "website",

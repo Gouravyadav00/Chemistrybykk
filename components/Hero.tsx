@@ -17,7 +17,7 @@ export default function Hero() {
           transition={{ duration: 0.7 }}
         >
           <div className="inline-flex items-center gap-2 clay-sm px-4 py-2 mb-5 text-sm text-clay-accent font-semibold">
-            <Sparkles size={14} /> CBSE · NCERT · Class 9–12
+            <Sparkles size={14} /> NCERT · Class 9–12
           </div>
           <h1 className="display text-[2rem] sm:text-5xl md:text-6xl font-extrabold leading-[1.08] text-clay-ink dark:text-white">
             Chemistry{" "}

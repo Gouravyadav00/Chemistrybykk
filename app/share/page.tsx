@@ -101,7 +101,7 @@ export default function SharePage() {
                 transition={{ duration: 4, repeat: Infinity }}
                 className="absolute top-6 right-6 clay-sm px-3 py-2 text-xs font-semibold text-clay-accent flex items-center gap-2"
               >
-                <BookOpen size={14} /> CBSE / NCERT
+                <BookOpen size={14} /> NCERT · Class 9–12
               </motion.div>
               <motion.div
                 animate={{ y: [0, 12, 0] }}
