@@ -46,7 +46,7 @@ const credentials = [
   },
   {
     icon: FlaskConical,
-    label: "Chemistry Teacher · Class 9–10",
+    label: "Foundation Faculty",
     sub: "Gradient Institute",
   },
   {

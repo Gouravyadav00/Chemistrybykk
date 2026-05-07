@@ -27,7 +27,7 @@ export default function Hero() {
           <p className="mt-4 sm:mt-5 text-base sm:text-lg text-clay-muted max-w-lg">
             Notes, walkthroughs and chapter-wise resources designed by{" "}
             <span className="font-semibold text-clay-ink dark:text-white">
-              Khyati Kaushik (M.Sc. Chemistry, 94.2%)
+              Khyati Kaushik (M.Sc. Chemistry)
             </span>{" "}
             — built to make Organic, Inorganic & Physical Chemistry actually
             click.
