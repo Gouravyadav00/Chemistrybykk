@@ -25,12 +25,12 @@ export default function Hero() {
             <br /> for Every Student
           </h1>
           <p className="mt-4 sm:mt-5 text-base sm:text-lg text-clay-muted max-w-lg">
-            Notes, walkthroughs and chapter-wise resources designed by{" "}
+            Chapter-wise notes, clear walkthroughs and exam-ready resources
+            crafted by{" "}
             <span className="font-semibold text-clay-ink dark:text-white">
               Khyati Kaushik (M.Sc. Chemistry)
             </span>{" "}
-            — built to make Organic, Inorganic & Physical Chemistry actually
-            click.
+            — designed to make Chemistry finally click.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
