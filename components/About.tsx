@@ -21,7 +21,7 @@ const philosophy = [
   },
   {
     icon: Target,
-    title: "Board-ready, not exam-shocked",
+    title: "Board-ready",
     body:
       "Chapter-wise tests, focused revision and sample-paper practice keep students one step ahead of the board pattern.",
   },
@@ -41,7 +41,7 @@ const credentials = [
   },
   {
     icon: BookOpen,
-    label: "Chemistry Teacher · Class 9–12",
+    label: "PGT Chemistry",
     sub: "RDS School, Dharuhera",
   },
   {
@@ -101,7 +101,7 @@ export default function About() {
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3">
             <Mini label="Experience" value="9 mo+" />
-            <Mini label="Subjects" value="Org · Inorg · Phys" />
+            <Mini label="Subjects" value="Chemistry" />
             <Mini label="Curriculum" value="NCERT" />
             <Mini label="Based in" value="Bhiwadi, RJ" />
           </div>
