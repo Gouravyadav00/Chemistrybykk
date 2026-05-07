@@ -6,8 +6,8 @@ import { Instagram, Linkedin, Send, Youtube } from "lucide-react";
 const socials = [
   {
     name: "YouTube",
-    handle: "@KhyatiKaushik-p4c",
-    href: "https://www.youtube.com/@KhyatiKaushik-p4c",
+    handle: "@chemistrybykk",
+    href: "https://www.youtube.com/@chemistrybykk",
     icon: Youtube,
     color: "from-red-400 to-red-600",
   },

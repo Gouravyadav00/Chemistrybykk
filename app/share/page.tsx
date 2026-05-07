@@ -117,7 +117,7 @@ export default function SharePage() {
         {/* social row */}
         <div className="grid sm:grid-cols-3 gap-4 mt-6">
           <ShareTile
-            href="https://www.youtube.com/@KhyatiKaushik-p4c"
+            href="https://www.youtube.com/@chemistrybykk"
             icon={Youtube}
             label="YouTube"
             sub="Live concept walkthroughs"

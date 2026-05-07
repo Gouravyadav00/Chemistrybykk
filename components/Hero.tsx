@@ -38,7 +38,7 @@ export default function Hero() {
               Explore Notes <ArrowRight size={18} />
             </a>
             <a
-              href="https://www.youtube.com/@KhyatiKaushik-p4c"
+              href="https://www.youtube.com/@chemistrybykk"
               target="_blank"
               rel="noreferrer"
               className="clay-btn-secondary"
