@@ -100,7 +100,7 @@ export default function About() {
             />
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <Mini label="Experience" value="9 mo+" />
+            <Mini label="Experience" value="1+ Year" />
             <Mini label="Subjects" value="Chemistry" />
             <Mini label="Curriculum" value="NCERT" />
             <Mini label="Based in" value="Bhiwadi, RJ" />
