@@ -171,25 +171,37 @@ function LibraryTab() {
   }, [activeId, assets]);
 
   const onUpload = async (slug: string, kind: AssetKind, file: File) => {
-    const blob = await upload(
-      `library/class${activeId}/${kind}/${slug}-${file.name}`,
-      file,
-      { access: "public", handleUploadUrl: "/api/blob/upload" },
-    );
-    const res = await fetch("/api/admin/assets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind,
-        classId: activeId,
-        slug,
-        url: blob.url,
-        fileName: file.name,
-        size: file.size,
-      }),
-    });
-    if (!res.ok) throw new Error("Failed to register asset");
-    await refresh();
+    try {
+      const blob = await upload(
+        `library/class${activeId}/${kind}/${slug}-${file.name}`,
+        file,
+        { access: "public", handleUploadUrl: "/api/blob/upload" },
+      );
+      const res = await fetch("/api/admin/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind,
+          classId: activeId,
+          slug,
+          url: blob.url,
+          fileName: file.name,
+          size: file.size,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error ?? "Failed to register asset");
+      }
+      await refresh();
+    } catch (e) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      alert(
+        `Upload failed for "${file.name}" (${sizeMb} MB).\n\n${
+          (e as Error).message ?? "Unknown error"
+        }\n\nNotes can be up to 100 MB. If your file is larger, compress it first.`,
+      );
+    }
   };
 
   const removeAsset = async (slug: string, kind: AssetKind) => {
@@ -291,7 +303,7 @@ function RoadmapAdmin({
         file,
         { access: "public", handleUploadUrl: "/api/blob/upload" },
       );
-      await fetch("/api/admin/assets", {
+      const res = await fetch("/api/admin/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -302,7 +314,18 @@ function RoadmapAdmin({
           size: file.size,
         }),
       });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error ?? "Failed to register asset");
+      }
       await onChange();
+    } catch (e) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      alert(
+        `Upload failed for "${file.name}" (${sizeMb} MB).\n\n${
+          (e as Error).message ?? "Unknown error"
+        }`,
+      );
     } finally {
       setBusy(null);
     }

@@ -14,7 +14,8 @@ const ALLOWED_TYPES = [
   "image/gif",
 ];
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const STUDENT_MAX_BYTES = 5 * 1024 * 1024; // 5 MB — doubt attachments
+const ADMIN_MAX_BYTES = 100 * 1024 * 1024; // 100 MB — chapter notes can be large
 
 export async function POST(req: Request) {
   // Gate: only signed-in students or admin can upload
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
         const safe = pathname.replace(/[^\w.\-]/g, "_");
         return {
           allowedContentTypes: ALLOWED_TYPES,
-          maximumSizeInBytes: MAX_BYTES,
+          maximumSizeInBytes: isAdmin ? ADMIN_MAX_BYTES : STUDENT_MAX_BYTES,
           addRandomSuffix: true,
           tokenPayload: JSON.stringify({ uploader: folder, original: safe }),
         };
