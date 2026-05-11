@@ -9,8 +9,10 @@ import {
   setSubscriberCookie,
 } from "@/lib/serverAuth";
 import {
+  computeStreak,
   findByEmail,
   getSubscriber,
+  logVisit,
   upsertSubscriber,
 } from "@/lib/subscribers";
 
@@ -101,11 +103,16 @@ export async function GET() {
   if (admin) return NextResponse.json({ role: "admin" });
   const subId = getSubscriberId();
   if (!subId) return NextResponse.json({ role: "guest" });
-  const sub = await getSubscriber(subId);
+  let sub = await getSubscriber(subId);
   if (!sub) return NextResponse.json({ role: "guest" });
+  // Log today's visit so the streak advances when the student returns.
+  // logVisit is a no-op if today is already logged.
+  sub = (await logVisit(subId)) ?? sub;
+  const streak = computeStreak(sub.visits);
   return NextResponse.json({
     role: "subscriber",
     subscriber: { email: sub.email, name: sub.name, class: sub.class },
+    streak,
   });
 }
 

@@ -1,6 +1,16 @@
 import crypto from "crypto";
 import { kv } from "./kv";
 
+export type QuizScore = {
+  classId: string;
+  chapterSlug: string;
+  title: string;
+  correct: number;
+  total: number;
+  pct: number;
+  takenAt: number;
+};
+
 export type Subscriber = {
   id: string;
   email: string;
@@ -14,6 +24,8 @@ export type Subscriber = {
   joinedAt: number;
   visits: number[];
   lastVisit?: number;
+  // Latest score per chapter — key is `${classId}:${chapterSlug}`
+  quizScores?: Record<string, QuizScore>;
 };
 
 const SUB_PREFIX = "sub:";
@@ -150,6 +162,41 @@ export function computeStats(subs: Subscriber[]): Stats {
     if ((s.lastVisit ?? 0) >= d7) activeLast7d++;
   }
   return { total: subs.length, byClass, joinedLast7d, joinedLast30d, activeLast7d };
+}
+
+// Returns the current daily-visit streak ending today (or yesterday if today
+// hasn't been logged yet). 0 if neither today nor yesterday has a visit.
+export function computeStreak(visits: number[] | undefined): number {
+  if (!visits?.length) return 0;
+  const days = new Set<string>();
+  for (const t of visits) days.add(new Date(t).toDateString());
+  const today = new Date();
+  const yesterday = new Date(Date.now() - 86_400_000);
+  let cursor: Date;
+  if (days.has(today.toDateString())) cursor = today;
+  else if (days.has(yesterday.toDateString())) cursor = yesterday;
+  else return 0;
+  let streak = 0;
+  while (days.has(cursor.toDateString())) {
+    streak++;
+    cursor = new Date(cursor.getTime() - 86_400_000);
+  }
+  return streak;
+}
+
+export async function recordQuizScore(
+  id: string,
+  score: QuizScore,
+): Promise<Subscriber | null> {
+  const sub = await getSubscriber(id);
+  if (!sub) return null;
+  const key = `${score.classId}:${score.chapterSlug}`;
+  const next: Subscriber = {
+    ...sub,
+    quizScores: { ...(sub.quizScores ?? {}), [key]: score },
+  };
+  await kv.set(subKey(id), next);
+  return next;
 }
 
 // Counts how many of the last `days` calendar days have at least one visit.

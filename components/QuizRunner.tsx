@@ -178,6 +178,23 @@ export default function QuizRunner({ quiz }: { quiz: QuizDefinition }) {
     };
   }, [questions, answers]);
 
+  // Persist score once we land in the submitted phase (last-attempt only).
+  useEffect(() => {
+    if (phase !== "submitted" || questions.length === 0) return;
+    fetch("/api/quiz/score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        classId: quiz.classId,
+        chapterSlug: quiz.chapterSlug,
+        title: quiz.title,
+        correct: score.correct,
+        total: score.total,
+      }),
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   // ---------- Renders ----------
   if (phase === "submitted") {
     return (

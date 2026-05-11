@@ -13,11 +13,13 @@ import {
   ScrollText,
   Star,
   Trash2,
+  Trophy,
   Upload as UploadIcon,
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import AdminDoubts from "./AdminDoubts";
+import AdminQuizScores from "./AdminQuizScores";
 import AdminTestimonials from "./AdminTestimonials";
 import {
   classes,
@@ -36,7 +38,12 @@ import {
 } from "@/lib/notesStore";
 import StudentsAnalytics from "./StudentsAnalytics";
 
-type Tab = "library" | "students" | "doubts" | "testimonials";
+type Tab =
+  | "library"
+  | "students"
+  | "quizscores"
+  | "doubts"
+  | "testimonials";
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("library");
@@ -89,6 +96,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           label="Students"
         />
         <TabBtn
+          active={tab === "quizscores"}
+          onClick={() => setTab("quizscores")}
+          icon={<Trophy size={14} />}
+          label="Quiz Scores"
+        />
+        <TabBtn
           active={tab === "doubts"}
           onClick={() => setTab("doubts")}
           icon={<MessageCircleQuestion size={14} />}
@@ -108,6 +121,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         <LibraryTab />
       ) : tab === "students" ? (
         <StudentsAnalytics />
+      ) : tab === "quizscores" ? (
+        <AdminQuizScores />
       ) : tab === "doubts" ? (
         <AdminDoubts />
       ) : (

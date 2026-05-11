@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
+  Flame,
   LayoutDashboard,
   Menu,
   MessageCircleQuestion,
@@ -18,6 +19,7 @@ type Whoami =
   | {
       role: "subscriber";
       subscriber: { email: string; name?: string; class?: string };
+      streak?: number;
     }
   | { role: "admin" };
 
@@ -60,6 +62,8 @@ export default function Navbar() {
   }, [me]);
 
   const showDoubts = !!me && me.role !== "guest" && me.role !== "admin";
+  const streak =
+    me && me.role === "subscriber" ? me.streak ?? 0 : null;
 
   const greet = (() => {
     if (!me || me.role === "guest") return null;
@@ -111,6 +115,7 @@ export default function Navbar() {
               )}
             </Link>
           )}
+          {streak !== null && <StreakPill streak={streak} />}
           {greet ? (
             <Link
               href="/signin"
@@ -131,6 +136,11 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {streak !== null && (
+            <span className="md:hidden">
+              <StreakPill streak={streak} compact />
+            </span>
+          )}
           <ThemeToggle />
           <button
             className="md:hidden clay-sm w-11 h-11 flex items-center justify-center"
@@ -187,8 +197,70 @@ export default function Navbar() {
               "Sign In"
             )}
           </Link>
+          {streak !== null && (
+            <div className="px-3 py-3 flex items-center gap-2">
+              <StreakPill streak={streak} />
+              <span className="text-xs text-clay-muted">
+                {streak === 0
+                  ? "Visit daily to start a streak"
+                  : streak === 1
+                    ? "Day 1 — keep going!"
+                    : `${streak}-day streak 🔥`}
+              </span>
+            </div>
+          )}
         </motion.div>
       )}
     </motion.header>
+  );
+}
+
+function StreakPill({
+  streak,
+  compact,
+}: {
+  streak: number;
+  compact?: boolean;
+}) {
+  const broken = streak === 0;
+  const tooltip = broken
+    ? "Visit any day to start a new streak"
+    : streak === 1
+      ? "Day 1 of your streak — return tomorrow to keep it!"
+      : `${streak}-day visit streak — keep it going!`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 240, damping: 22 }}
+      title={tooltip}
+      aria-label={tooltip}
+      className={`flex items-center gap-1.5 rounded-xl select-none ${
+        compact ? "px-2 py-1.5" : "px-2.5 py-1.5"
+      } ${
+        broken
+          ? "bg-clay-soft/70 dark:bg-white/5 text-clay-muted"
+          : "bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-500/20 dark:to-red-500/20 text-orange-700 dark:text-orange-300"
+      }`}
+    >
+      <motion.span
+        animate={broken ? {} : { rotate: [0, -8, 8, 0] }}
+        transition={broken ? {} : { duration: 2, repeat: Infinity, repeatDelay: 1.5 }}
+        className={`grid place-items-center w-6 h-6 rounded-lg ${
+          broken
+            ? "bg-clay-soft text-clay-muted"
+            : "bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-clay-sm"
+        }`}
+      >
+        <Flame size={12} />
+      </motion.span>
+      <span className="text-sm font-extrabold leading-none">{streak}</span>
+      {!compact && (
+        <span className="text-[10px] uppercase tracking-wide font-semibold leading-none">
+          {streak === 1 ? "day" : "days"}
+        </span>
+      )}
+    </motion.div>
   );
 }
