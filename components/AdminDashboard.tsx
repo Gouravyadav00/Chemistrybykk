@@ -484,7 +484,7 @@ function ChapterRow({
           <FileText size={18} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="display font-bold text-clay-ink dark:text-white truncate">
+          <div className="display font-bold text-clay-ink dark:text-white whitespace-pre-line leading-snug break-words">
             {ch.name}
           </div>
           <div className="text-[10px] uppercase tracking-wide text-clay-muted">

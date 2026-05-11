@@ -277,7 +277,7 @@ export default function LearningHub() {
                     {isSel ? <CheckCircle2 size={22} /> : <Circle size={22} />}
                   </button>
                 </div>
-                <h3 className="display font-bold text-clay-ink dark:text-white leading-snug">
+                <h3 className="display font-bold text-clay-ink dark:text-white leading-snug whitespace-pre-line">
                   {ch.name}
                 </h3>
 

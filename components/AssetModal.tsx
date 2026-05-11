@@ -1,7 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Download, ExternalLink, FileText, Sparkles, X, Zap } from "lucide-react";
+import { Download, ExternalLink, FileText, Lock, Sparkles, X, Zap } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   defaultCheatsheetPath,
@@ -23,6 +24,7 @@ export default function AssetModal({
   onClose: () => void;
 }) {
   const [loading, setLoading] = useState(true);
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     if (chapter) {
@@ -30,6 +32,20 @@ export default function AssetModal({
       const t = setTimeout(() => setLoading(false), 600);
       return () => clearTimeout(t);
     }
+  }, [chapter]);
+
+  useEffect(() => {
+    if (!chapter) return;
+    let cancelled = false;
+    fetch("/api/auth", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setSignedIn(d?.role === "admin" || d?.role === "subscriber");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [chapter]);
 
   useEffect(() => {
@@ -99,13 +115,13 @@ export default function AssetModal({
                   <div className="text-[10px] sm:text-xs text-clay-muted">
                     Class {classId} · {label}
                   </div>
-                  <div className="display font-bold text-sm sm:text-base text-clay-ink dark:text-white truncate">
+                  <div className="display font-bold text-sm sm:text-base text-clay-ink dark:text-white whitespace-pre-line leading-snug">
                     {chapter.name}
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                {available && (
+                {available && signedIn && (
                   <>
                     <a
                       href={src}
@@ -125,6 +141,17 @@ export default function AssetModal({
                       <span className="hidden xs:inline sm:inline">Download</span>
                     </a>
                   </>
+                )}
+                {available && !signedIn && (
+                  <Link
+                    href="/signin"
+                    className="clay-btn-primary text-xs sm:text-sm py-2 sm:py-2.5 px-3 sm:px-4"
+                    title="Sign in to download"
+                  >
+                    <Lock size={14} />
+                    <span className="hidden xs:inline sm:inline">Sign in to download</span>
+                    <span className="inline xs:hidden sm:hidden">Sign in</span>
+                  </Link>
                 )}
                 <button
                   onClick={onClose}
