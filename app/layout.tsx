@@ -53,28 +53,14 @@ export const metadata: Metadata = {
     siteName: "ChemistryByKK",
     type: "website",
     locale: "en_IN",
-    images: [
-      {
-        url: "/images/banner-1.png",
-        width: 1983,
-        height: 793,
-        alt: "ChemistryByKK — Chemistry Simplified for Every Student",
-      },
-    ],
+    // og:image is auto-generated at /opengraph-image (1200×630) — see app/opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
     title: "ChemistryByKK — Chemistry Simplified for Class 9–12",
     description:
       "Free NCERT notes, cheatsheets, past papers and quizzes for Class 9–12.",
-    images: [
-      {
-        url: "/images/banner-1.png",
-        width: 1983,
-        height: 793,
-        alt: "ChemistryByKK banner",
-      },
-    ],
+    // twitter:image is auto-generated at /twitter-image (1200×630) — see app/twitter-image.tsx
   },
   icons: {
     icon: [{ url: "/images/logo.png", type: "image/png" }],
