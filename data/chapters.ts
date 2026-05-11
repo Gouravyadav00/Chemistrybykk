@@ -41,9 +41,9 @@ export const classes: ClassData[] = [
     subtitle: "Foundation Chemistry · NCERT",
     chapters: [
       make("Matter in Our Surroundings"),
-      make("Is Matter Around Us Pure"),
-      make("Atoms and Molecules"),
-      make("Structure of the Atom"),
+      make("Exploring Mixtures and their Seperation/ Is Matter Around Us Pure?"),
+      make("Atomic Foundations of Matter/ Atoms and Molecules"),
+      make("Journey Inside the Atom/ Structure of the Atom"),
     ],
   },
   {
