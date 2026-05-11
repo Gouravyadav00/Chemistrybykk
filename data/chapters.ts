@@ -1,4 +1,4 @@
-export type AssetKind = "notes" | "cheatsheet";
+export type AssetKind = "notes" | "cheatsheet" | "pastpaper";
 
 export type Chapter = {
   slug: string;
@@ -7,6 +7,8 @@ export type Chapter = {
   file?: string;
   cheatsheetAvailable: boolean;
   cheatsheet?: string;
+  pastpaperAvailable: boolean;
+  pastpaper?: string;
 };
 
 export type ClassData = {
@@ -18,7 +20,7 @@ export type ClassData = {
 
 const make = (
   name: string,
-  opts: { file?: string; cheatsheet?: string } = {},
+  opts: { file?: string; cheatsheet?: string; pastpaper?: string } = {},
 ): Chapter => {
   const slug = name
     .toLowerCase()
@@ -31,6 +33,8 @@ const make = (
     file: opts.file,
     cheatsheetAvailable: Boolean(opts.cheatsheet),
     cheatsheet: opts.cheatsheet,
+    pastpaperAvailable: Boolean(opts.pastpaper),
+    pastpaper: opts.pastpaper,
   };
 };
 
@@ -101,6 +105,9 @@ export const defaultNotesPath = (classId: string, slug: string) =>
 export const defaultCheatsheetPath = (classId: string, slug: string) =>
   `/notes/class${classId}/${slug}.cheatsheet.pdf`;
 
+export const defaultPastpaperPath = (classId: string, slug: string) =>
+  `/notes/class${classId}/${slug}.pastpaper.pdf`;
+
 // Backwards-compatible aliases
 export const defaultPdfPath = defaultNotesPath;
 
@@ -111,7 +118,26 @@ export const isPdfSrc = (src: string) =>
   /\.pdf$/i.test(src) || src.startsWith("data:application/pdf");
 
 export const getAssetSrc = (chapter: Chapter, kind: AssetKind) =>
-  kind === "notes" ? chapter.file : chapter.cheatsheet;
+  kind === "notes"
+    ? chapter.file
+    : kind === "cheatsheet"
+      ? chapter.cheatsheet
+      : chapter.pastpaper;
 
 export const getAssetAvailable = (chapter: Chapter, kind: AssetKind) =>
-  kind === "notes" ? chapter.notesAvailable : chapter.cheatsheetAvailable;
+  kind === "notes"
+    ? chapter.notesAvailable
+    : kind === "cheatsheet"
+      ? chapter.cheatsheetAvailable
+      : chapter.pastpaperAvailable;
+
+export const defaultPathFor = (
+  kind: AssetKind,
+  classId: string,
+  slug: string,
+) =>
+  kind === "notes"
+    ? defaultNotesPath(classId, slug)
+    : kind === "cheatsheet"
+      ? defaultCheatsheetPath(classId, slug)
+      : defaultPastpaperPath(classId, slug);

@@ -1,12 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Download, ExternalLink, FileText, Lock, Sparkles, X, Zap } from "lucide-react";
+import { Download, ExternalLink, FileText, Lock, ScrollText, Sparkles, X, Zap } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  defaultCheatsheetPath,
-  defaultNotesPath,
+  defaultPathFor,
+  getAssetAvailable,
+  getAssetSrc,
   isImageSrc,
   type AssetKind,
   type Chapter,
@@ -58,23 +59,30 @@ export default function AssetModal({
 
   if (!chapter) return null;
 
-  const isCheatsheet = kind === "cheatsheet";
-  const available = isCheatsheet
-    ? chapter.cheatsheetAvailable
-    : chapter.notesAvailable;
-  const src =
-    (isCheatsheet ? chapter.cheatsheet : chapter.file) ??
-    (isCheatsheet
-      ? defaultCheatsheetPath(classId, chapter.slug)
-      : defaultNotesPath(classId, chapter.slug));
+  const available = getAssetAvailable(chapter, kind);
+  const src = getAssetSrc(chapter, kind) ?? defaultPathFor(kind, classId, chapter.slug);
 
   const isImage = available && isImageSrc(src);
-  const downloadName = `${chapter.slug}${isCheatsheet ? "-cheatsheet" : ""}${
+  const slugSuffix =
+    kind === "cheatsheet" ? "-cheatsheet" : kind === "pastpaper" ? "-pastpaper" : "";
+  const downloadName = `${chapter.slug}${slugSuffix}${
     isImage ? src.match(/\.(png|jpe?g|webp|gif|avif)$/i)?.[0] ?? ".png" : ".pdf"
   }`;
 
-  const Icon = isCheatsheet ? Zap : FileText;
-  const label = isCheatsheet ? "Cheatsheet" : "Notes";
+  const Icon =
+    kind === "cheatsheet" ? Zap : kind === "pastpaper" ? ScrollText : FileText;
+  const label =
+    kind === "cheatsheet"
+      ? "Cheatsheet"
+      : kind === "pastpaper"
+        ? "Past Paper"
+        : "Notes";
+  const iconTone =
+    kind === "cheatsheet"
+      ? "bg-gradient-to-br from-amber-100 to-orange-200 text-orange-600"
+      : kind === "pastpaper"
+        ? "bg-gradient-to-br from-violet-100 to-violet-300 text-violet-700"
+        : "bg-gradient-to-br from-blue-100 to-blue-300 text-clay-accentDeep";
 
   return (
     <AnimatePresence>
@@ -103,11 +111,7 @@ export default function AssetModal({
             <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 p-3 sm:p-6 pl-5 sm:pl-8 border-b border-clay-soft/60 dark:border-white/5">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 <div
-                  className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl grid place-items-center shadow-clay-sm flex-shrink-0 ${
-                    isCheatsheet
-                      ? "bg-gradient-to-br from-amber-100 to-orange-200 text-orange-600"
-                      : "bg-gradient-to-br from-blue-100 to-blue-300 text-clay-accentDeep"
-                  }`}
+                  className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl grid place-items-center shadow-clay-sm flex-shrink-0 ${iconTone}`}
                 >
                   <Icon size={16} />
                 </div>
@@ -208,7 +212,19 @@ export default function AssetModal({
 }
 
 function ComingSoon({ name, kind }: { name: string; kind: AssetKind }) {
-  const isCheatsheet = kind === "cheatsheet";
+  const label =
+    kind === "cheatsheet"
+      ? "Cheatsheet"
+      : kind === "pastpaper"
+        ? "Past paper"
+        : "Notes";
+  const verb = kind === "notes" ? "are" : "is";
+  const Glyph =
+    kind === "cheatsheet"
+      ? Sparkles
+      : kind === "pastpaper"
+        ? ScrollText
+        : FileText;
   return (
     <div className="h-full grid place-items-center text-center px-6">
       <div>
@@ -217,18 +233,18 @@ function ComingSoon({ name, kind }: { name: string; kind: AssetKind }) {
           transition={{ duration: 3, repeat: Infinity }}
           className="w-32 h-32 mx-auto clay-blob mb-6 grid place-items-center text-white"
         >
-          {isCheatsheet ? <Sparkles size={36} /> : <FileText size={36} />}
+          <Glyph size={36} />
         </motion.div>
         <h3 className="display text-2xl font-extrabold text-clay-ink dark:text-white">
           Coming Soon
         </h3>
         <p className="mt-2 text-clay-muted max-w-md mx-auto">
-          {isCheatsheet ? "Cheatsheet" : "Notes"} for{" "}
+          {label} for{" "}
           <span className="font-semibold text-clay-ink dark:text-white">
             {name}
           </span>{" "}
-          {isCheatsheet ? "is" : "are"} being prepared. Check back soon — or
-          follow the YouTube channel for the live walkthrough.
+          {verb} being prepared. Check back soon — or follow the YouTube
+          channel for the live walkthrough.
         </p>
       </div>
     </div>

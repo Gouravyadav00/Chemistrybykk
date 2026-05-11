@@ -23,12 +23,15 @@ export function applyChapterOverrides(
 ): Chapter {
   const notes = assets[assetIdFor("notes", classId, chapter.slug)];
   const cheat = assets[assetIdFor("cheatsheet", classId, chapter.slug)];
+  const pyq = assets[assetIdFor("pastpaper", classId, chapter.slug)];
   return {
     ...chapter,
     notesAvailable: notes ? true : chapter.notesAvailable,
     file: notes?.url ?? chapter.file,
     cheatsheetAvailable: cheat ? true : chapter.cheatsheetAvailable,
     cheatsheet: cheat?.url ?? chapter.cheatsheet,
+    pastpaperAvailable: pyq ? true : chapter.pastpaperAvailable,
+    pastpaper: pyq?.url ?? chapter.pastpaper,
   };
 }
 

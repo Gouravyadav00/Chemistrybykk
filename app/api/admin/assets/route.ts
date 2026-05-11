@@ -1,17 +1,19 @@
 import { del } from "@vercel/blob";
 import { NextResponse } from "next/server";
+import { findClass } from "@/data/chapters";
 import {
   type RegistryKind,
   deleteAsset,
   detectContentKind,
   setAsset,
 } from "@/lib/assets";
+import { notifyNewAsset } from "@/lib/mailer";
 import { getAdmin } from "@/lib/serverAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VALID_KINDS: RegistryKind[] = ["notes", "cheatsheet", "roadmap"];
+const VALID_KINDS: RegistryKind[] = ["notes", "cheatsheet", "pastpaper", "roadmap"];
 const VALID_CLASSES = ["9", "10", "11", "12"];
 
 const isBlobUrl = (url: string) =>
@@ -55,7 +57,24 @@ export async function POST(req: Request) {
     size,
     updatedAt: Date.now(),
   });
-  return NextResponse.json({ entry });
+
+  // Best-effort: email subscribers when a new chapter asset drops.
+  // Roadmaps don't trigger a blast — they're a static welcome bonus.
+  let notified = 0;
+  if (entry.kind !== "roadmap" && slug) {
+    const cls = findClass(classId);
+    const ch = cls?.chapters.find((c) => c.slug === slug);
+    if (ch) {
+      try {
+        const r = await notifyNewAsset(entry, ch.name);
+        notified = r.sent;
+      } catch {
+        // never let mail failure break the upload
+      }
+    }
+  }
+
+  return NextResponse.json({ entry, notified });
 }
 
 export async function DELETE(req: Request) {

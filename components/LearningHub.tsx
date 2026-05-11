@@ -3,28 +3,33 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen,
+  Brain,
   CheckCircle2,
   Circle,
+  Clock,
   Download,
   Eye,
   FileText,
   Layers,
   Map,
+  Play,
+  ScrollText,
   Search,
   Sparkles,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   classes,
-  defaultCheatsheetPath,
-  defaultNotesPath,
+  defaultPathFor,
   getAssetAvailable,
   getAssetSrc,
   isImageSrc,
   type AssetKind,
   type Chapter,
 } from "@/data/chapters";
+import { hasQuiz, QUIZZES } from "@/data/quizzes";
 import {
   fetchAssetMap,
   getRoadmap,
@@ -34,7 +39,10 @@ import {
 import AssetModal from "./AssetModal";
 
 type ResolvedClass = ReturnType<typeof resolveClass>;
-type HubKind = AssetKind | "roadmap";
+type HubKind = AssetKind | "roadmap" | "quiz";
+
+const isAssetTab = (k: HubKind): k is AssetKind =>
+  k === "notes" || k === "cheatsheet" || k === "pastpaper";
 
 export default function LearningHub() {
   const [activeId, setActiveId] = useState<string>("12");
@@ -77,7 +85,7 @@ export default function LearningHub() {
     return resolved.chapters.filter((c) => c.name.toLowerCase().includes(q));
   }, [resolved, search]);
 
-  const chapterKind: AssetKind = kind === "roadmap" ? "notes" : kind;
+  const chapterKind: AssetKind = isAssetTab(kind) ? kind : "notes";
   const allAvailable = resolved?.chapters.every((c) =>
     getAssetAvailable(c, chapterKind),
   );
@@ -91,18 +99,18 @@ export default function LearningHub() {
     });
   };
 
+  const suffixFor = (k: AssetKind) =>
+    k === "cheatsheet" ? "-cheatsheet" : k === "pastpaper" ? "-pastpaper" : "";
+
   const downloadOne = (ch: Chapter) => {
     const src =
-      getAssetSrc(ch, chapterKind) ??
-      (chapterKind === "notes"
-        ? defaultNotesPath(activeId, ch.slug)
-        : defaultCheatsheetPath(activeId, ch.slug));
+      getAssetSrc(ch, chapterKind) ?? defaultPathFor(chapterKind, activeId, ch.slug);
     const ext = isImageSrc(src)
       ? src.match(/\.(png|jpe?g|webp|gif|avif)$/i)?.[0] ?? ".png"
       : ".pdf";
     const a = document.createElement("a");
     a.href = src;
-    a.download = `${ch.slug}${chapterKind === "cheatsheet" ? "-cheatsheet" : ""}${ext}`;
+    a.download = `${ch.slug}${suffixFor(chapterKind)}${ext}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -157,7 +165,7 @@ export default function LearningHub() {
         })}
       </div>
 
-      {/* notes / cheatsheet / roadmap switch */}
+      {/* notes / cheatsheet / pastpaper / roadmap / quiz switch */}
       <div className="flex justify-center mb-6">
         <div className="clay-inset p-1.5 inline-flex items-center gap-1 rounded-2xl flex-wrap">
           <SwitchTab
@@ -174,11 +182,25 @@ export default function LearningHub() {
             tone="warm"
           />
           <SwitchTab
+            active={kind === "pastpaper"}
+            onClick={() => setKind("pastpaper")}
+            icon={<ScrollText size={14} />}
+            label="Past Papers"
+            tone="violet"
+          />
+          <SwitchTab
             active={kind === "roadmap"}
             onClick={() => setKind("roadmap")}
             icon={<Map size={14} />}
             label="Roadmaps"
             tone="emerald"
+          />
+          <SwitchTab
+            active={kind === "quiz"}
+            onClick={() => setKind("quiz")}
+            icon={<Brain size={14} />}
+            label="Quizzes"
+            tone="rose"
           />
         </div>
       </div>
@@ -189,6 +211,8 @@ export default function LearningHub() {
           assets={assets}
           onZoom={() => setZoomRoadmap(true)}
         />
+      ) : kind === "quiz" ? (
+        <QuizView classId={activeId} chapters={chapters} search={search} setSearch={setSearch} />
       ) : (
       <>
       {/* search + actions */}
@@ -242,7 +266,33 @@ export default function LearningHub() {
             const isSel = selected.has(ch.slug);
             const notesOk = ch.notesAvailable;
             const cheatOk = ch.cheatsheetAvailable;
-            const activeAvail = chapterKind === "notes" ? notesOk : cheatOk;
+            const pyqOk = ch.pastpaperAvailable;
+            const activeAvail = getAssetAvailable(ch, chapterKind);
+            const iconCls =
+              chapterKind === "cheatsheet"
+                ? "bg-gradient-to-br from-amber-100 to-orange-200 text-orange-600"
+                : chapterKind === "pastpaper"
+                  ? "bg-gradient-to-br from-violet-100 to-violet-300 text-violet-700"
+                  : "bg-gradient-to-br from-blue-100 to-blue-300 text-clay-accentDeep";
+            const ActiveIcon =
+              chapterKind === "cheatsheet"
+                ? Zap
+                : chapterKind === "pastpaper"
+                  ? ScrollText
+                  : BookOpen;
+            const activeLabelReady =
+              chapterKind === "cheatsheet"
+                ? "Cheatsheet Ready"
+                : chapterKind === "pastpaper"
+                  ? "Past Paper Ready"
+                  : "Notes Ready";
+            const activePillCls = activeAvail
+              ? chapterKind === "cheatsheet"
+                ? "bg-amber-100 text-orange-700"
+                : chapterKind === "pastpaper"
+                  ? "bg-violet-100 text-violet-700"
+                  : "bg-blue-100 text-clay-accentDeep"
+              : "bg-orange-100 text-orange-600";
             return (
               <motion.div
                 key={ch.slug}
@@ -254,17 +304,9 @@ export default function LearningHub() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div
-                    className={`w-11 h-11 rounded-2xl grid place-items-center shadow-clay-sm ${
-                      chapterKind === "cheatsheet"
-                        ? "bg-gradient-to-br from-amber-100 to-orange-200 text-orange-600"
-                        : "bg-gradient-to-br from-blue-100 to-blue-300 text-clay-accentDeep"
-                    }`}
+                    className={`w-11 h-11 rounded-2xl grid place-items-center shadow-clay-sm ${iconCls}`}
                   >
-                    {chapterKind === "cheatsheet" ? (
-                      <Zap size={18} />
-                    ) : (
-                      <BookOpen size={18} />
-                    )}
+                    <ActiveIcon size={18} />
                   </div>
                   <button
                     onClick={(e) => {
@@ -283,19 +325,9 @@ export default function LearningHub() {
 
                 <div className="mt-3 flex items-center justify-between">
                   <span
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                      activeAvail
-                        ? chapterKind === "cheatsheet"
-                          ? "bg-amber-100 text-orange-700"
-                          : "bg-blue-100 text-clay-accentDeep"
-                        : "bg-orange-100 text-orange-600"
-                    }`}
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${activePillCls}`}
                   >
-                    {activeAvail
-                      ? chapterKind === "cheatsheet"
-                        ? "Cheatsheet Ready"
-                        : "Notes Ready"
-                      : "Coming Soon"}
+                    {activeAvail ? activeLabelReady : "Coming Soon"}
                   </span>
                   {activeAvail && (
                     <button
@@ -306,13 +338,17 @@ export default function LearningHub() {
                       className="text-clay-accent hover:text-clay-accentDeep flex items-center gap-1 text-sm font-semibold"
                     >
                       <Download size={14} />{" "}
-                      {chapterKind === "cheatsheet" ? "Sheet" : "PDF"}
+                      {chapterKind === "cheatsheet"
+                        ? "Sheet"
+                        : chapterKind === "pastpaper"
+                          ? "PYQ"
+                          : "PDF"}
                     </button>
                   )}
                 </div>
 
-                {/* small dual-availability indicator */}
-                <div className="mt-3 flex items-center gap-2 text-[10px] uppercase tracking-wide">
+                {/* small tri-availability indicator */}
+                <div className="mt-3 flex items-center gap-2 text-[10px] uppercase tracking-wide flex-wrap">
                   <Pill
                     on={notesOk}
                     onClickInline={(e) => {
@@ -331,6 +367,16 @@ export default function LearningHub() {
                     icon={<Zap size={10} />}
                     label="Cheatsheet"
                     tone="warm"
+                  />
+                  <Pill
+                    on={pyqOk}
+                    onClickInline={(e) => {
+                      e.stopPropagation();
+                      setOpen({ chapter: ch, kind: "pastpaper" });
+                    }}
+                    icon={<ScrollText size={10} />}
+                    label="PYQ"
+                    tone="violet"
                   />
                 </div>
               </motion.div>
@@ -460,14 +506,18 @@ function SwitchTab({
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
-  tone?: "blue" | "warm" | "emerald";
+  tone?: "blue" | "warm" | "emerald" | "violet" | "rose";
 }) {
   const activeClass =
     tone === "warm"
       ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-clay-sm"
       : tone === "emerald"
         ? "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-clay-sm"
-        : "clay-btn-primary";
+        : tone === "violet"
+          ? "bg-gradient-to-br from-violet-400 to-violet-600 text-white shadow-clay-sm"
+          : tone === "rose"
+            ? "bg-gradient-to-br from-rose-400 to-rose-600 text-white shadow-clay-sm"
+            : "clay-btn-primary";
   return (
     <button
       onClick={onClick}
@@ -494,12 +544,14 @@ function Pill({
   onClickInline: (e: React.MouseEvent) => void;
   icon: React.ReactNode;
   label: string;
-  tone?: "blue" | "warm";
+  tone?: "blue" | "warm" | "violet";
 }) {
   const onClasses =
     tone === "warm"
       ? "bg-amber-100 text-orange-700 hover:bg-amber-200"
-      : "bg-blue-100 text-clay-accentDeep hover:bg-blue-200";
+      : tone === "violet"
+        ? "bg-violet-100 text-violet-700 hover:bg-violet-200"
+        : "bg-blue-100 text-clay-accentDeep hover:bg-blue-200";
   return (
     <button
       onClick={onClickInline}
@@ -512,5 +564,110 @@ function Pill({
     >
       {icon} {label}
     </button>
+  );
+}
+
+function QuizView({
+  classId,
+  chapters,
+  search,
+  setSearch,
+}: {
+  classId: string;
+  chapters: Chapter[];
+  search: string;
+  setSearch: (v: string) => void;
+}) {
+  const available = chapters.filter((ch) => hasQuiz(classId, ch.slug));
+
+  return (
+    <div>
+      <div className="clay p-4 sm:p-5 mb-6 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+        <div className="clay-inset flex items-center gap-2 px-4 py-3 flex-1 md:max-w-md">
+          <Search size={16} className="text-clay-muted flex-shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search chapters…"
+            className="bg-transparent outline-none text-sm w-full text-clay-ink dark:text-white placeholder:text-clay-muted min-w-0"
+          />
+        </div>
+        <div className="text-xs text-clay-muted md:text-right">
+          {available.length} live · {chapters.length - available.length} coming
+          soon
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {chapters.map((ch, i) => {
+          const live = hasQuiz(classId, ch.slug);
+          const def = live ? QUIZZES.find((q) => q.classId === classId && q.chapterSlug === ch.slug) : undefined;
+          return (
+            <motion.div
+              key={ch.slug}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="clay p-5 flex flex-col"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-11 h-11 rounded-2xl grid place-items-center shadow-clay-sm bg-gradient-to-br from-rose-100 to-rose-300 text-rose-700">
+                  <Brain size={18} />
+                </div>
+                <span
+                  className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
+                    live
+                      ? "bg-rose-100 text-rose-700"
+                      : "bg-orange-100 text-orange-600"
+                  }`}
+                >
+                  {live ? "Live" : "Soon"}
+                </span>
+              </div>
+              <h3 className="display font-bold text-clay-ink dark:text-white leading-snug whitespace-pre-line mb-2">
+                {ch.name}
+              </h3>
+              {live && def ? (
+                <div className="text-xs text-clay-muted flex items-center gap-3 mb-4">
+                  <span className="flex items-center gap-1">
+                    <Brain size={12} /> {def.questionsPerAttempt} MCQs
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock size={12} /> {def.durationSec / 60} min
+                  </span>
+                </div>
+              ) : (
+                <div className="text-xs text-clay-muted mb-4">
+                  Quiz is being prepared for this chapter.
+                </div>
+              )}
+              <div className="mt-auto">
+                {live ? (
+                  <Link
+                    href={`/quiz/${classId}/${ch.slug}`}
+                    className="clay-btn-primary text-sm w-full justify-center"
+                  >
+                    <Play size={14} /> Give Test
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="clay-btn-secondary text-sm w-full justify-center opacity-50 cursor-not-allowed"
+                  >
+                    Coming soon
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
+        {chapters.length === 0 && (
+          <div className="col-span-full clay p-10 text-center text-clay-muted">
+            <Brain size={28} className="mx-auto mb-2 text-clay-accent" />
+            No chapters match "{search}".
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

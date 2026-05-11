@@ -1,11 +1,11 @@
 import { kv } from "./kv";
 
-export type RegistryKind = "notes" | "cheatsheet" | "roadmap";
+export type RegistryKind = "notes" | "cheatsheet" | "pastpaper" | "roadmap";
 
 export type AssetEntry = {
   kind: RegistryKind;
   classId: string; // "9" | "10" | "11" | "12"
-  slug?: string; // chapter slug for notes/cheatsheet; absent for roadmap
+  slug?: string; // chapter slug for notes/cheatsheet/pastpaper; absent for roadmap
   url: string; // blob URL
   fileName: string;
   contentKind: "pdf" | "image";

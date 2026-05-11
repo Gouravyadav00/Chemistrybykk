@@ -47,6 +47,7 @@ export default function Footer() {
             <li><a href="#about" className="hover:text-clay-accent">About</a></li>
             <li><a href="#learn" className="hover:text-clay-accent">Learning Hub</a></li>
             <li><Link href="/doubts" className="hover:text-clay-accent">Doubts</Link></li>
+            <li><Link href="/quiz/9/matter-in-our-surroundings" className="hover:text-clay-accent">Quizzes</Link></li>
             <li><a href="#connect" className="hover:text-clay-accent">Connect</a></li>
             <li><Link href="/share" className="hover:text-clay-accent">Share Banner</Link></li>
           </ul>
@@ -76,9 +77,13 @@ export default function Footer() {
         </div>
       </div>
 
-      <p className="text-center text-xs text-clay-muted mt-6 flex items-center justify-center gap-1">
+      <p className="text-center text-xs text-clay-muted mt-6 flex items-center justify-center gap-1 flex-wrap">
         © {new Date().getFullYear()} ChemistryByKK. Made with
         <Heart size={12} className="text-blue-500 inline" /> for curious minds.
+        <span className="mx-1">·</span>
+        <Link href="/privacy" className="hover:text-clay-accent">Privacy</Link>
+        <span className="mx-1">·</span>
+        <Link href="/terms" className="hover:text-clay-accent">Terms</Link>
       </p>
     </footer>
   );

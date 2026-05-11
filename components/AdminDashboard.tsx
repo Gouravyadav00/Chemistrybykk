@@ -10,6 +10,7 @@ import {
   LogOut,
   Map,
   MessageCircleQuestion,
+  ScrollText,
   Star,
   Trash2,
   Upload as UploadIcon,
@@ -22,6 +23,7 @@ import {
   classes,
   defaultCheatsheetPath,
   defaultNotesPath,
+  defaultPastpaperPath,
   type AssetKind,
   type Chapter,
 } from "@/data/chapters";
@@ -216,6 +218,8 @@ function LibraryTab() {
   const totalNotes = data?.chapters.filter((c) => c.notesAvailable).length ?? 0;
   const totalSheets =
     data?.chapters.filter((c) => c.cheatsheetAvailable).length ?? 0;
+  const totalPyq =
+    data?.chapters.filter((c) => c.pastpaperAvailable).length ?? 0;
   const total = data?.chapters.length ?? 0;
 
   return (
@@ -239,7 +243,7 @@ function LibraryTab() {
         })}
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-3 mb-6">
+      <div className="grid sm:grid-cols-3 gap-3 mb-6">
         <SummaryTile
           icon={<FileText size={20} />}
           tone="blue"
@@ -252,6 +256,13 @@ function LibraryTab() {
           tone="warm"
           value={`${totalSheets}/${total}`}
           label="Cheatsheets"
+          sub={data?.label ?? ""}
+        />
+        <SummaryTile
+          icon={<ScrollText size={20} />}
+          tone="violet"
+          value={`${totalPyq}/${total}`}
+          label="Past Papers"
           sub={data?.label ?? ""}
         />
       </div>
@@ -440,7 +451,7 @@ function SummaryTile({
   sub,
 }: {
   icon: React.ReactNode;
-  tone: "blue" | "warm";
+  tone: "blue" | "warm" | "violet";
   value: string;
   label: string;
   sub: string;
@@ -448,7 +459,9 @@ function SummaryTile({
   const cls =
     tone === "warm"
       ? "from-amber-100 to-orange-200 text-orange-600"
-      : "from-blue-100 to-blue-300 text-clay-accentDeep";
+      : tone === "violet"
+        ? "from-violet-100 to-violet-300 text-violet-700"
+        : "from-blue-100 to-blue-300 text-clay-accentDeep";
   return (
     <div className="clay p-5 flex items-center gap-4">
       <div
@@ -518,6 +531,20 @@ function ChapterRow({
         onUpload={onUpload}
         onRemove={onRemove}
       />
+
+      <div className="h-px bg-clay-soft/60 dark:bg-white/5 my-3" />
+
+      <AssetSection
+        kind="pastpaper"
+        label="Past Paper"
+        accept="application/pdf"
+        available={ch.pastpaperAvailable}
+        file={ch.pastpaper}
+        defaultPath={defaultPastpaperPath(classId, ch.slug)}
+        slug={ch.slug}
+        onUpload={onUpload}
+        onRemove={onRemove}
+      />
     </div>
   );
 }
@@ -543,11 +570,20 @@ function AssetSection({
   onUpload: (slug: string, kind: AssetKind, file: File) => Promise<void>;
   onRemove: (slug: string, kind: AssetKind) => Promise<void>;
 }) {
-  const isCheat = kind === "cheatsheet";
-  const tone = isCheat
-    ? "bg-amber-100 text-orange-700"
-    : "bg-blue-100 text-clay-accentDeep";
-  const Icon = isCheat ? Zap : FileText;
+  const tone =
+    kind === "cheatsheet"
+      ? "bg-amber-100 text-orange-700"
+      : kind === "pastpaper"
+        ? "bg-violet-100 text-violet-700"
+        : "bg-blue-100 text-clay-accentDeep";
+  const Icon =
+    kind === "cheatsheet" ? Zap : kind === "pastpaper" ? ScrollText : FileText;
+  const iconColor =
+    kind === "cheatsheet"
+      ? "text-orange-600"
+      : kind === "pastpaper"
+        ? "text-violet-700"
+        : "text-clay-accent";
   const [busy, setBusy] = useState(false);
 
   const isBlob = file?.includes(".blob.vercel-storage.com");
@@ -574,10 +610,7 @@ function AssetSection({
     <div>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Icon
-            size={14}
-            className={isCheat ? "text-orange-600" : "text-clay-accent"}
-          />
+          <Icon size={14} className={iconColor} />
           <span className="text-xs font-semibold text-clay-ink dark:text-white">
             {label}
           </span>
