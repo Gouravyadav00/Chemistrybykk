@@ -277,7 +277,7 @@ function LibraryTab() {
           icon={<ScrollText size={20} />}
           tone="violet"
           value={`${totalPyq}/${total}`}
-          label="Past Papers"
+          label="Question Bank"
           sub={data?.label ?? ""}
         />
       </div>
@@ -551,7 +551,7 @@ function ChapterRow({
 
       <AssetSection
         kind="pastpaper"
-        label="Past Paper"
+        label="Question Bank"
         accept="application/pdf"
         available={ch.pastpaperAvailable}
         file={ch.pastpaper}

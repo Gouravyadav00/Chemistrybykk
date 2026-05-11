@@ -63,7 +63,7 @@ async function sendOne(
 function kindLabel(kind: AssetEntry["kind"]): string {
   if (kind === "notes") return "Notes";
   if (kind === "cheatsheet") return "Cheatsheet";
-  if (kind === "pastpaper") return "Past Paper";
+  if (kind === "pastpaper") return "Question Bank";
   return "Roadmap";
 }
 

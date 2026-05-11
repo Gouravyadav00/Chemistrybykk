@@ -75,7 +75,7 @@ export default function AssetModal({
     kind === "cheatsheet"
       ? "Cheatsheet"
       : kind === "pastpaper"
-        ? "Past Paper"
+        ? "Question Bank"
         : "Notes";
   const iconTone =
     kind === "cheatsheet"
@@ -216,7 +216,7 @@ function ComingSoon({ name, kind }: { name: string; kind: AssetKind }) {
     kind === "cheatsheet"
       ? "Cheatsheet"
       : kind === "pastpaper"
-        ? "Past paper"
+        ? "Question bank"
         : "Notes";
   const verb = kind === "notes" ? "are" : "is";
   const Glyph =

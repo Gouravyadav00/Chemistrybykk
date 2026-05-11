@@ -61,9 +61,9 @@ export default function Navbar() {
     return () => clearInterval(t);
   }, [me]);
 
-  const showDoubts = !!me && me.role !== "guest" && me.role !== "admin";
-  const streak =
-    me && me.role === "subscriber" ? me.streak ?? 0 : null;
+  const isSubscriber = !!me && me.role === "subscriber";
+  const showDoubts = !!me && me.role !== "admin";
+  const streak = isSubscriber && me.role === "subscriber" ? me.streak ?? 0 : null;
 
   const greet = (() => {
     if (!me || me.role === "guest") return null;
@@ -104,7 +104,7 @@ export default function Navbar() {
           {showDoubts && (
             <Link
               href="/doubts"
-              className="px-3 py-2 rounded-xl text-sm font-medium text-clay-muted hover:text-clay-accent hover:bg-white/60 dark:hover:bg-white/5 transition flex items-center gap-1.5 relative"
+              className="px-3 py-2 rounded-xl text-sm font-semibold text-clay-accent hover:text-clay-accentDeep hover:bg-blue-50 dark:hover:bg-white/5 transition flex items-center gap-1.5 relative"
             >
               <MessageCircleQuestion size={14} />
               Doubts
@@ -115,7 +115,6 @@ export default function Navbar() {
               )}
             </Link>
           )}
-          {streak !== null && <StreakPill streak={streak} />}
           {greet ? (
             <Link
               href="/signin"
@@ -136,11 +135,7 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {streak !== null && (
-            <span className="md:hidden">
-              <StreakPill streak={streak} compact />
-            </span>
-          )}
+          {streak !== null && <StreakPill streak={streak} compact />}
           <ThemeToggle />
           <button
             className="md:hidden clay-sm w-11 h-11 flex items-center justify-center"

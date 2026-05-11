@@ -6,23 +6,26 @@
 
 :root {
   color-scheme: light;
-  --bg-grad-1: #eaf2ff;
-  --bg-grad-2: #f8fbff;
-  --bg-grad-3: #dbe7ff;
+  --bg-grad-1: #b8d0ff;
+  --bg-grad-2: #dde9ff;
+  --bg-grad-3: #a4bfff;
+  --bg-grad-4: #c8dcff;
 }
 
 .dark {
   color-scheme: dark;
-  --bg-grad-1: #07142e;
-  --bg-grad-2: #0a1c44;
-  --bg-grad-3: #050b1f;
+  --bg-grad-1: #102449;
+  --bg-grad-2: #17305f;
+  --bg-grad-3: #0c1a3c;
+  --bg-grad-4: #14274e;
 }
 
 html,
 body {
   background:
-    radial-gradient(60rem 60rem at 10% -10%, var(--bg-grad-3) 0%, transparent 60%),
-    radial-gradient(60rem 60rem at 110% 10%, var(--bg-grad-1) 0%, transparent 55%),
+    radial-gradient(70rem 60rem at 5% -10%, var(--bg-grad-3) 0%, transparent 55%),
+    radial-gradient(70rem 60rem at 115% 5%, var(--bg-grad-1) 0%, transparent 55%),
+    radial-gradient(60rem 50rem at 50% 120%, var(--bg-grad-4) 0%, transparent 60%),
     var(--bg-grad-2);
   min-height: 100%;
   font-family: "Inter", system-ui, sans-serif;

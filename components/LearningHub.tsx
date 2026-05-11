@@ -185,7 +185,7 @@ export default function LearningHub() {
             active={kind === "pastpaper"}
             onClick={() => setKind("pastpaper")}
             icon={<ScrollText size={14} />}
-            label="Past Papers"
+            label="Question Bank"
             tone="violet"
           />
           <SwitchTab
@@ -265,7 +265,6 @@ export default function LearningHub() {
           {chapters.map((ch, i) => {
             const isSel = selected.has(ch.slug);
             const notesOk = ch.notesAvailable;
-            const cheatOk = ch.cheatsheetAvailable;
             const pyqOk = ch.pastpaperAvailable;
             const activeAvail = getAssetAvailable(ch, chapterKind);
             const iconCls =
@@ -284,7 +283,7 @@ export default function LearningHub() {
               chapterKind === "cheatsheet"
                 ? "Cheatsheet Ready"
                 : chapterKind === "pastpaper"
-                  ? "Past Paper Ready"
+                  ? "Question Bank Ready"
                   : "Notes Ready";
             const activePillCls = activeAvail
               ? chapterKind === "cheatsheet"
@@ -347,7 +346,7 @@ export default function LearningHub() {
                   )}
                 </div>
 
-                {/* small tri-availability indicator */}
+                {/* small availability indicator */}
                 <div className="mt-3 flex items-center gap-2 text-[10px] uppercase tracking-wide flex-wrap">
                   <Pill
                     on={notesOk}
@@ -357,16 +356,6 @@ export default function LearningHub() {
                     }}
                     icon={<FileText size={10} />}
                     label="Notes"
-                  />
-                  <Pill
-                    on={cheatOk}
-                    onClickInline={(e) => {
-                      e.stopPropagation();
-                      setOpen({ chapter: ch, kind: "cheatsheet" });
-                    }}
-                    icon={<Zap size={10} />}
-                    label="Cheatsheet"
-                    tone="warm"
                   />
                   <Pill
                     on={pyqOk}
