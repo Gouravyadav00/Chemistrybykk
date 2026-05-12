@@ -1,4 +1,4 @@
-import { del, put } from "@vercel/blob";
+import { del } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { findClass } from "@/data/chapters";
 import {
@@ -8,33 +8,10 @@ import {
   setAsset,
 } from "@/lib/assets";
 import { notifyNewAsset } from "@/lib/mailer";
-import { isPdfFileName, stampPdf } from "@/lib/pdfWatermark";
 import { getAdmin } from "@/lib/serverAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// 20MB / 15-page PDFs are ~3-6s end-to-end. Headroom for cold-start image loads.
-export const maxDuration = 60;
-
-const STAMPED_KINDS: RegistryKind[] = ["notes", "cheatsheet", "pastpaper"];
-
-function stampedPathname(originalUrl: string, fileName: string): string {
-  // Mirror the path the client used so blobs stay tidy in the dashboard.
-  // Original URL: https://<host>.public.blob.vercel-storage.com/library/class9/notes/foo.pdf
-  try {
-    const u = new URL(originalUrl);
-    // Strip leading slash and any vercel-blob random suffix segments
-    const raw = u.pathname.replace(/^\/+/, "");
-    const dir = raw.includes("/") ? raw.slice(0, raw.lastIndexOf("/")) : "";
-    const base = fileName || raw.slice(raw.lastIndexOf("/") + 1);
-    const dot = base.lastIndexOf(".");
-    const stem = dot > 0 ? base.slice(0, dot) : base;
-    const ext = dot > 0 ? base.slice(dot) : ".pdf";
-    return `${dir ? `${dir}/` : ""}${stem}-stamped${ext}`;
-  } catch {
-    return `library/stamped-${Date.now()}-${fileName || "file.pdf"}`;
-  }
-}
 
 const VALID_KINDS: RegistryKind[] = ["notes", "cheatsheet", "pastpaper", "roadmap"];
 const VALID_CLASSES = ["9", "10", "11", "12"];
@@ -70,52 +47,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid blob URL" }, { status: 400 });
   }
 
-  // Auto-watermark PDFs (notes, cheatsheets, question banks). Image cheatsheets,
-  // roadmaps, and non-PDF uploads pass through untouched.
-  let finalUrl = url;
-  let finalSize = size;
-  let watermarked = false;
-  const shouldStamp =
-    STAMPED_KINDS.includes(kind) &&
-    isPdfFileName(fileName) &&
-    detectContentKind(url) === "pdf";
-
-  if (shouldStamp) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`fetch ${res.status}`);
-      const sourceBytes = await res.arrayBuffer();
-      const stamped = await stampPdf(sourceBytes);
-      const stampedPath = stampedPathname(url, fileName);
-      const uploaded = await put(stampedPath, stamped, {
-        access: "public",
-        contentType: "application/pdf",
-        addRandomSuffix: true,
-      });
-      finalUrl = uploaded.url;
-      finalSize = stamped.byteLength;
-      watermarked = true;
-      // Best-effort: remove the unstamped original so we don't double-pay storage.
-      try {
-        await del(url);
-      } catch {
-        // ignore — original blob still useful for debugging if delete fails
-      }
-    } catch (err) {
-      // If watermarking fails (corrupt PDF, encrypted, oversized), fall back to
-      // the original upload rather than blocking the admin from publishing.
-      console.error("[assets] watermark failed, using original:", err);
-    }
-  }
-
   const entry = await setAsset({
     kind,
     classId,
     slug,
-    url: finalUrl,
+    url,
     fileName: fileName.slice(0, 200),
-    contentKind: detectContentKind(finalUrl),
-    size: finalSize,
+    contentKind: detectContentKind(url),
+    size,
     updatedAt: Date.now(),
   });
 
@@ -135,7 +74,7 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ entry, notified, watermarked });
+  return NextResponse.json({ entry, notified });
 }
 
 export async function DELETE(req: Request) {
