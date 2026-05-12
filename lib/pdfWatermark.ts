@@ -9,9 +9,11 @@ import {
   type PDFPage,
 } from "pdf-lib";
 
-// Tunables — kept in sync with watermark_pdf.py
-const CORNER_LOGO_WIDTH_PT = 48;        // ~17 mm
-const CORNER_MARGIN_PT = 8.5;           // ~3 mm
+// Tunables — kept in sync with watermark_pdf.py. All sizes are ratios of the
+// page width so the same constants look right on A4, US Letter, and the
+// oversized school-scanned PDFs (some are ~1150pt wide, ~2x A4).
+const CORNER_LOGO_WIDTH_RATIO = 0.105;  // ~10.5% of page width
+const CORNER_MARGIN_RATIO = 0.018;      // ~1.8% of page width
 const WATERMARK_WIDTH_RATIO = 0.72;     // fraction of page width
 const MULTIPLY_GS_KEY = "GsMult";
 
@@ -98,11 +100,13 @@ export async function stampPdf(
     );
 
     // ----- Top-right crisp logo, normal blend ON TOP -----
-    const lgH = CORNER_LOGO_WIDTH_PT * (logoImg.height / logoImg.width);
+    const lgW = pw * CORNER_LOGO_WIDTH_RATIO;
+    const lgH = lgW * (logoImg.height / logoImg.width);
+    const margin = pw * CORNER_MARGIN_RATIO;
     page.drawImage(logoImg, {
-      x: pw - CORNER_LOGO_WIDTH_PT - CORNER_MARGIN_PT,
-      y: ph - lgH - CORNER_MARGIN_PT,
-      width: CORNER_LOGO_WIDTH_PT,
+      x: pw - lgW - margin,
+      y: ph - lgH - margin,
+      width: lgW,
       height: lgH,
     });
   }
