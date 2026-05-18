@@ -120,6 +120,17 @@ export async function POST(req: Request) {
   // Best-effort: email subscribers when a new chapter asset drops.
   // Roadmaps don't trigger a blast — they're a static welcome bonus.
   let notified = 0;
+  let mail:
+    | {
+        sent: number;
+        failed: number;
+        skipped: boolean;
+        reason?: string;
+        totalSubs?: number;
+        targetCount?: number;
+        errors?: string[];
+      }
+    | undefined;
   if (entry.kind !== "roadmap" && slug) {
     const cls = findClass(classId);
     const ch = cls?.chapters.find((c) => c.slug === slug);
@@ -127,13 +138,20 @@ export async function POST(req: Request) {
       try {
         const r = await notifyNewAsset(entry, ch.name);
         notified = r.sent;
-      } catch {
-        // never let mail failure break the upload
+        mail = r;
+      } catch (err) {
+        console.error("[assets] notifyNewAsset threw:", err);
+        mail = {
+          sent: 0,
+          failed: 0,
+          skipped: true,
+          reason: (err as Error).message ?? "unknown error",
+        };
       }
     }
   }
 
-  return NextResponse.json({ entry, notified, watermarked });
+  return NextResponse.json({ entry, notified, watermarked, mail });
 }
 
 export async function DELETE(req: Request) {

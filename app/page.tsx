@@ -8,6 +8,7 @@ import SignInToast from "@/components/SignInToast";
 import SocialLinks from "@/components/SocialLinks";
 import Testimonials from "@/components/Testimonials";
 import VisitPing from "@/components/VisitPing";
+import WalkthroughVideo from "@/components/WalkthroughVideo";
 
 export default function HomePage() {
   return (
@@ -19,6 +20,7 @@ export default function HomePage() {
       <main>
         <Hero />
         <About />
+        <WalkthroughVideo />
         <LearningHub />
         <Testimonials />
         <SocialLinks />

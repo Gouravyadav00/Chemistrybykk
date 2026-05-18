@@ -99,12 +99,30 @@ function newAssetEmail(
   return { subject, html };
 }
 
+export type NotifyResult = {
+  sent: number;
+  failed: number;
+  skipped: boolean;
+  reason?: string;
+  totalSubs?: number;
+  targetCount?: number;
+  errors?: string[];
+};
+
 export async function notifyNewAsset(
   entry: AssetEntry,
   chapterName: string,
-): Promise<{ sent: number; failed: number; skipped: boolean }> {
+): Promise<NotifyResult> {
   if (!isMailConfigured()) {
-    return { sent: 0, failed: 0, skipped: true };
+    console.error(
+      "[mailer] not configured — set BREVO_API_KEY and BREVO_SENDER_EMAIL on Vercel",
+    );
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: "BREVO_API_KEY or BREVO_SENDER_EMAIL is missing",
+    };
   }
   const subs = await listSubscribers();
   // Only notify subscribers who selected the matching class.
@@ -113,13 +131,38 @@ export async function notifyNewAsset(
     (s) => !!s.email && (!s.class || s.class === entry.classId),
   );
 
+  console.log(
+    `[mailer] new ${entry.kind} class=${entry.classId} — ${subs.length} subscribers, ${targets.length} match (class filter)`,
+  );
+  if (targets.length === 0 && subs.length > 0) {
+    console.warn(
+      `[mailer] no subscribers match class=${entry.classId}. Existing classes:`,
+      Array.from(new Set(subs.map((s) => s.class ?? "(unset)"))),
+    );
+  }
+
   let sent = 0;
   let failed = 0;
+  const errors: string[] = [];
   for (const s of targets) {
     const { subject, html } = newAssetEmail(s.name, entry, chapterName);
     const r = await sendOne({ email: s.email, name: s.name }, subject, html);
-    if (r.ok) sent++;
-    else failed++;
+    if (r.ok) {
+      sent++;
+    } else {
+      failed++;
+      const detail = `${s.email}: ${r.status ?? "-"} ${r.error ?? ""}`.trim();
+      errors.push(detail);
+      console.error(`[mailer] send failed -> ${detail}`);
+    }
   }
-  return { sent, failed, skipped: false };
+  console.log(`[mailer] done — sent=${sent} failed=${failed}`);
+  return {
+    sent,
+    failed,
+    skipped: false,
+    totalSubs: subs.length,
+    targetCount: targets.length,
+    errors: errors.length ? errors : undefined,
+  };
 }
