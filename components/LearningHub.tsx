@@ -51,14 +51,48 @@ export default function LearningHub() {
   const [resolved, setResolved] = useState<ResolvedClass | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [open, setOpen] = useState<{ chapter: Chapter; kind: AssetKind } | null>(
-    null,
-  );
+  const [open, setOpen] = useState<{
+    chapter: Chapter;
+    kind: AssetKind;
+    initialPhase?: string;
+  } | null>(null);
   const [zoomRoadmap, setZoomRoadmap] = useState(false);
+  const [deepLink, setDeepLink] = useState<{
+    classId: string;
+    slug: string;
+    phase?: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchAssetMap().then(setAssets);
   }, []);
+
+  // Deep-link: ?class=12&chapter=solutions[&phase=phase-1] auto-opens the
+  // chapter's notes modal at the right phase when someone follows a share URL.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const classId = params.get("class");
+    const chapter = params.get("chapter");
+    if (!classId || !chapter) return;
+    const phase = params.get("phase") ?? undefined;
+    setActiveId(classId);
+    setKind("notes");
+    setDeepLink({ classId, slug: chapter, phase });
+  }, []);
+
+  // Once asset overrides land and the chapter exists, pop the modal.
+  useEffect(() => {
+    if (!deepLink || !resolved) return;
+    if (resolved.classId !== deepLink.classId) return;
+    const ch = resolved.chapters.find((c) => c.slug === deepLink.slug);
+    if (!ch) return;
+    setOpen({ chapter: ch, kind: "notes", initialPhase: deepLink.phase });
+    setDeepLink(null);
+    requestAnimationFrame(() => {
+      document.getElementById("learn")?.scrollIntoView({ behavior: "smooth" });
+    });
+  }, [deepLink, resolved]);
 
   useEffect(() => {
     setResolved(resolveClass(activeId, assets));
@@ -322,6 +356,19 @@ export default function LearningHub() {
                   {ch.name}
                 </h3>
 
+                {chapterKind === "notes" && ch.phases && ch.phases.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {ch.phases.map((p, idx) => (
+                      <span
+                        key={p.phase}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-clay-accentDeep"
+                      >
+                        {idx + 1}. {p.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 <div className="mt-3 flex items-center justify-between">
                   <span
                     className={`text-xs font-semibold px-2.5 py-1 rounded-full ${activePillCls}`}
@@ -387,6 +434,7 @@ export default function LearningHub() {
         chapter={open?.chapter ?? null}
         classId={activeId}
         kind={open?.kind ?? "notes"}
+        initialPhase={open?.initialPhase}
         onClose={() => setOpen(null)}
       />
 

@@ -17,15 +17,31 @@ export default function AssetModal({
   chapter,
   classId,
   kind,
+  initialPhase,
   onClose,
 }: {
   chapter: Chapter | null;
   classId: string;
   kind: AssetKind;
+  initialPhase?: string;
   onClose: () => void;
 }) {
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
+  const phases = kind === "notes" ? chapter?.phases ?? [] : [];
+  const [activePhase, setActivePhase] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!chapter) return;
+    if (phases.length) {
+      const initial =
+        (initialPhase && phases.find((p) => p.phase === initialPhase)?.phase) ??
+        phases[0].phase;
+      setActivePhase(initial);
+    } else {
+      setActivePhase(null);
+    }
+  }, [chapter, initialPhase, phases]);
 
   useEffect(() => {
     if (chapter) {
@@ -33,7 +49,7 @@ export default function AssetModal({
       const t = setTimeout(() => setLoading(false), 600);
       return () => clearTimeout(t);
     }
-  }, [chapter]);
+  }, [chapter, activePhase]);
 
   useEffect(() => {
     if (!chapter) return;
@@ -60,12 +76,17 @@ export default function AssetModal({
   if (!chapter) return null;
 
   const available = getAssetAvailable(chapter, kind);
-  const src = getAssetSrc(chapter, kind) ?? defaultPathFor(kind, classId, chapter.slug);
+  const activePhaseObj = phases.find((p) => p.phase === activePhase) ?? null;
+  const src =
+    activePhaseObj?.url ??
+    getAssetSrc(chapter, kind) ??
+    defaultPathFor(kind, classId, chapter.slug);
 
   const isImage = available && isImageSrc(src);
   const slugSuffix =
     kind === "cheatsheet" ? "-cheatsheet" : kind === "pastpaper" ? "-pastpaper" : "";
-  const downloadName = `${chapter.slug}${slugSuffix}${
+  const phaseSuffix = activePhaseObj ? `-${activePhaseObj.phase}` : "";
+  const downloadName = `${chapter.slug}${slugSuffix}${phaseSuffix}${
     isImage ? src.match(/\.(png|jpe?g|webp|gif|avif)$/i)?.[0] ?? ".png" : ".pdf"
   }`;
 
@@ -167,6 +188,25 @@ export default function AssetModal({
                 </button>
               </div>
             </div>
+
+            {phases.length > 0 && (
+              <div className="flex items-center gap-1 sm:gap-2 px-3 sm:px-6 pl-5 sm:pl-8 py-2 sm:py-3 overflow-x-auto no-scrollbar border-b border-clay-soft/60 dark:border-white/5">
+                {phases.map((p, i) => (
+                  <button
+                    key={p.phase}
+                    onClick={() => setActivePhase(p.phase)}
+                    className={`flex-shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
+                      activePhase === p.phase
+                        ? "clay-btn-primary"
+                        : "clay-sm text-clay-ink dark:text-white"
+                    }`}
+                  >
+                    <span className="opacity-70 mr-1">{i + 1}.</span>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="hidden sm:block absolute bottom-3 left-1/2 -translate-x-1/2 text-clay-muted text-[10px] font-medium px-3 py-1 rounded-full bg-white/80 dark:bg-black/40 pointer-events-none">
               Press Esc or click outside to close

@@ -1,10 +1,23 @@
 export type AssetKind = "notes" | "cheatsheet" | "pastpaper";
 
+export type ChapterPhase = {
+  phase: string;       // slug like "phase-1"
+  label: string;       // display name like "Section 1: Concentration"
+  url: string;
+  fileName?: string;
+  size?: number;
+  updatedAt?: number;
+};
+
 export type Chapter = {
   slug: string;
   name: string;
   notesAvailable: boolean;
   file?: string;
+  // Optional ordered list of sub-section notes (Class 11/12 chapters taught
+  // across multiple videos). When non-empty, the UI shows a phase picker
+  // instead of a single Notes button.
+  phases?: ChapterPhase[];
   cheatsheetAvailable: boolean;
   cheatsheet?: string;
   pastpaperAvailable: boolean;

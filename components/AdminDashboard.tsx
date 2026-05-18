@@ -4,12 +4,16 @@ import { upload } from "@vercel/blob/client";
 import { motion } from "framer-motion";
 import {
   BarChart3,
+  Check,
+  Copy,
   Download,
   FileText,
+  Layers,
   Loader2,
   LogOut,
   Map,
   MessageCircleQuestion,
+  Plus,
   ScrollText,
   Star,
   Trash2,
@@ -28,12 +32,14 @@ import {
   defaultPastpaperPath,
   type AssetKind,
   type Chapter,
+  type ChapterPhase,
 } from "@/data/chapters";
 import {
   fetchAssetMap,
   getRoadmap,
   resolveClass,
   ROADMAP_DEFAULTS,
+  supportsPhases,
   type AssetMap,
 } from "@/lib/notesStore";
 import StudentsAnalytics from "./StudentsAnalytics";
@@ -187,13 +193,21 @@ function LibraryTab() {
     setData(resolveClass(activeId, assets));
   }, [activeId, assets]);
 
-  const onUpload = async (slug: string, kind: AssetKind, file: File) => {
+  const onUpload = async (
+    slug: string,
+    kind: AssetKind,
+    file: File,
+    phase?: string,
+    phaseLabel?: string,
+  ) => {
     try {
-      const blob = await upload(
-        `library/class${activeId}/${kind}/${slug}-${file.name}`,
-        file,
-        { access: "public", handleUploadUrl: "/api/blob/upload" },
-      );
+      const pathPrefix = phase
+        ? `library/class${activeId}/${kind}/${slug}/${phase}-`
+        : `library/class${activeId}/${kind}/${slug}-`;
+      const blob = await upload(`${pathPrefix}${file.name}`, file, {
+        access: "public",
+        handleUploadUrl: "/api/blob/upload",
+      });
       const res = await fetch("/api/admin/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -201,6 +215,8 @@ function LibraryTab() {
           kind,
           classId: activeId,
           slug,
+          phase,
+          phaseLabel,
           url: blob.url,
           fileName: file.name,
           size: file.size,
@@ -221,12 +237,20 @@ function LibraryTab() {
     }
   };
 
-  const removeAsset = async (slug: string, kind: AssetKind) => {
-    if (!confirm(`Remove this ${kind}? The file will be deleted.`)) return;
-    await fetch(
-      `/api/admin/assets?kind=${kind}&classId=${activeId}&slug=${encodeURIComponent(slug)}`,
-      { method: "DELETE" },
-    );
+  const removeAsset = async (
+    slug: string,
+    kind: AssetKind,
+    phase?: string,
+  ) => {
+    const what = phase ? "phase" : kind;
+    if (!confirm(`Remove this ${what}? The file will be deleted.`)) return;
+    const qs = new URLSearchParams({
+      kind,
+      classId: activeId,
+      slug,
+      ...(phase ? { phase } : {}),
+    });
+    await fetch(`/api/admin/assets?${qs.toString()}`, { method: "DELETE" });
     await refresh();
   };
 
@@ -502,8 +526,14 @@ function ChapterRow({
 }: {
   chapter: Chapter;
   classId: string;
-  onUpload: (slug: string, kind: AssetKind, file: File) => Promise<void>;
-  onRemove: (slug: string, kind: AssetKind) => Promise<void>;
+  onUpload: (
+    slug: string,
+    kind: AssetKind,
+    file: File,
+    phase?: string,
+    phaseLabel?: string,
+  ) => Promise<void>;
+  onRemove: (slug: string, kind: AssetKind, phase?: string) => Promise<void>;
 }) {
   return (
     <div className="clay p-5">
@@ -521,17 +551,28 @@ function ChapterRow({
         </div>
       </div>
 
-      <AssetSection
-        kind="notes"
-        label="Notes"
-        accept="application/pdf"
-        available={ch.notesAvailable}
-        file={ch.file}
-        defaultPath={defaultNotesPath(classId, ch.slug)}
-        slug={ch.slug}
-        onUpload={onUpload}
-        onRemove={onRemove}
-      />
+      {supportsPhases(classId) ? (
+        <NotesPhasesSection
+          classId={classId}
+          slug={ch.slug}
+          phases={ch.phases ?? []}
+          legacyUrl={ch.phases?.length ? undefined : ch.file}
+          onUpload={onUpload}
+          onRemove={onRemove}
+        />
+      ) : (
+        <AssetSection
+          kind="notes"
+          label="Notes"
+          accept="application/pdf"
+          available={ch.notesAvailable}
+          file={ch.file}
+          defaultPath={defaultNotesPath(classId, ch.slug)}
+          slug={ch.slug}
+          onUpload={onUpload}
+          onRemove={onRemove}
+        />
+      )}
 
       <div className="h-px bg-clay-soft/60 dark:bg-white/5 my-3" />
 
@@ -582,8 +623,14 @@ function AssetSection({
   file?: string;
   defaultPath: string;
   slug: string;
-  onUpload: (slug: string, kind: AssetKind, file: File) => Promise<void>;
-  onRemove: (slug: string, kind: AssetKind) => Promise<void>;
+  onUpload: (
+    slug: string,
+    kind: AssetKind,
+    file: File,
+    phase?: string,
+    phaseLabel?: string,
+  ) => Promise<void>;
+  onRemove: (slug: string, kind: AssetKind, phase?: string) => Promise<void>;
 }) {
   const tone =
     kind === "cheatsheet"
@@ -671,6 +718,260 @@ function AssetSection({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+/* -------------------- Notes phases (Class 11/12) -------------------- */
+
+function slugifyPhaseLabel(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+}
+
+function NotesPhasesSection({
+  classId,
+  slug,
+  phases,
+  legacyUrl,
+  onUpload,
+  onRemove,
+}: {
+  classId: string;
+  slug: string;
+  phases: ChapterPhase[];
+  legacyUrl?: string;
+  onUpload: (
+    slug: string,
+    kind: AssetKind,
+    file: File,
+    phase?: string,
+    phaseLabel?: string,
+  ) => Promise<void>;
+  onRemove: (slug: string, kind: AssetKind, phase?: string) => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [newLabel, setNewLabel] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [perPhaseBusy, setPerPhaseBusy] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const addPhase = async (file: File) => {
+    const label = newLabel.trim();
+    if (!label) {
+      alert("Give this phase a label first (e.g. \"Section 1: Concentration\").");
+      return;
+    }
+    const phaseSlug = slugifyPhaseLabel(label);
+    if (!phaseSlug) {
+      alert("Label must contain at least one letter or digit.");
+      return;
+    }
+    if (phases.some((p) => p.phase === phaseSlug)) {
+      alert("A phase with that label already exists.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await onUpload(slug, "notes", file, phaseSlug, label);
+      setNewLabel("");
+      setAdding(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const replacePhase = async (phaseId: string, label: string, file: File) => {
+    setPerPhaseBusy(phaseId);
+    try {
+      await onUpload(slug, "notes", file, phaseId, label);
+    } finally {
+      setPerPhaseBusy(null);
+    }
+  };
+
+  const deletePhase = async (phaseId: string) => {
+    setPerPhaseBusy(phaseId);
+    try {
+      await onRemove(slug, "notes", phaseId);
+    } finally {
+      setPerPhaseBusy(null);
+    }
+  };
+
+  const copyLink = async (phaseId: string) => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams({
+      class: classId,
+      chapter: slug,
+      phase: phaseId,
+    });
+    const link = `${window.location.origin}/?${params.toString()}#learn`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(phaseId);
+      setTimeout(() => setCopied((c) => (c === phaseId ? null : c)), 1800);
+    } catch {
+      window.prompt("Copy this share link:", link);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Layers size={14} className="text-clay-accent" />
+          <span className="text-xs font-semibold text-clay-ink dark:text-white">
+            Notes — Phases
+          </span>
+        </div>
+        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-blue-100 text-clay-accentDeep">
+          {phases.length} section{phases.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {phases.length === 0 && !legacyUrl && (
+        <div className="text-[11px] text-clay-muted mb-2.5">
+          No phases yet. Add one per video section (e.g. "Section 1: Concentration Terms").
+        </div>
+      )}
+
+      {legacyUrl && phases.length === 0 && (
+        <div className="clay-inset p-2.5 mb-3 text-[11px] text-clay-muted">
+          <span className="font-semibold text-orange-600">Legacy single PDF</span> is
+          live. Add phases below to split into sections — the single PDF will be
+          superseded by the first phase you upload.
+        </div>
+      )}
+
+      <div className="space-y-2 mb-3">
+        {phases.map((p, i) => {
+          const phaseBusy = perPhaseBusy === p.phase;
+          return (
+            <div key={p.phase} className="clay-sm p-3">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] uppercase tracking-wide text-clay-muted">
+                    Phase {i + 1}
+                  </div>
+                  <div className="font-semibold text-sm text-clay-ink dark:text-white truncate">
+                    {p.label}
+                  </div>
+                  <div className="text-[10px] text-clay-muted truncate">
+                    {p.fileName ?? p.url}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => copyLink(p.phase)}
+                  className="clay-btn-secondary text-[11px] py-1.5 px-2.5"
+                  title="Copy share link"
+                >
+                  {copied === p.phase ? (
+                    <>
+                      <Check size={12} /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={12} /> Copy link
+                    </>
+                  )}
+                </button>
+                <a
+                  href={p.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="clay-btn-secondary text-[11px] py-1.5 px-2.5"
+                  title="Preview"
+                >
+                  <Download size={12} /> Preview
+                </a>
+                <label className="clay-btn-secondary text-[11px] py-1.5 px-2.5 cursor-pointer">
+                  {phaseBusy ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <UploadIcon size={12} />
+                  )}
+                  Replace
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    disabled={phaseBusy}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) replacePhase(p.phase, p.label, f);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+                <button
+                  onClick={() => deletePhase(p.phase)}
+                  disabled={phaseBusy}
+                  className="clay-btn-secondary text-[11px] py-1.5 px-2.5 text-red-500"
+                >
+                  <Trash2 size={12} /> Delete
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {adding ? (
+        <div className="clay-inset p-3 space-y-2">
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            placeholder="Phase label (e.g. Section 1: Concentration Terms)"
+            className="w-full bg-transparent text-sm outline-none border-b border-clay-soft/60 dark:border-white/10 pb-1.5 text-clay-ink dark:text-white placeholder:text-clay-muted"
+            disabled={busy}
+            autoFocus
+          />
+          <div className="flex flex-wrap gap-2">
+            <label className="clay-btn-primary text-xs py-2 px-3 cursor-pointer">
+              {busy ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <UploadIcon size={14} />
+              )}
+              Pick PDF & Upload
+              <input
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                disabled={busy || !newLabel.trim()}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) addPhase(f);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </label>
+            <button
+              onClick={() => {
+                setAdding(false);
+                setNewLabel("");
+              }}
+              disabled={busy}
+              className="clay-btn-secondary text-xs py-2 px-3"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="clay-btn-secondary text-xs py-2 px-3"
+        >
+          <Plus size={14} /> Add Phase
+        </button>
+      )}
     </div>
   );
 }

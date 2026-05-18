@@ -3,9 +3,16 @@
 import {
   classes,
   type Chapter,
+  type ChapterPhase,
   type ClassData,
 } from "@/data/chapters";
-import { assetIdFor, type AssetMap } from "@/lib/assets";
+import { assetIdFor, listPhasesFor, type AssetMap } from "@/lib/assets";
+
+// Classes where notes can be split into multiple phases. Class 9/10 stay
+// single-PDF per chapter (board-level fits in one file); 11/12 chapters span
+// 2–3 YouTube videos so each phase gets its own notes PDF.
+export const PHASE_CLASSES = new Set(["11", "12"]);
+export const supportsPhases = (classId: string) => PHASE_CLASSES.has(classId);
 
 export type { AssetMap };
 
@@ -24,10 +31,25 @@ export function applyChapterOverrides(
   const notes = assets[assetIdFor("notes", classId, chapter.slug)];
   const cheat = assets[assetIdFor("cheatsheet", classId, chapter.slug)];
   const pyq = assets[assetIdFor("pastpaper", classId, chapter.slug)];
+  const phaseEntries = supportsPhases(classId)
+    ? listPhasesFor(assets, classId, chapter.slug)
+    : [];
+  const phases: ChapterPhase[] = phaseEntries.map((p) => ({
+    phase: p.phase!,
+    label: p.phaseLabel ?? p.phase!,
+    url: p.url,
+    fileName: p.fileName,
+    size: p.size,
+    updatedAt: p.updatedAt,
+  }));
+  const hasPhases = phases.length > 0;
   return {
     ...chapter,
-    notesAvailable: notes ? true : chapter.notesAvailable,
-    file: notes?.url ?? chapter.file,
+    notesAvailable: hasPhases || (notes ? true : chapter.notesAvailable),
+    // When phases exist, `file` points at the first phase so legacy callers
+    // (download buttons, "PDF" download link) still work.
+    file: hasPhases ? phases[0].url : (notes?.url ?? chapter.file),
+    phases: hasPhases ? phases : undefined,
     cheatsheetAvailable: cheat ? true : chapter.cheatsheetAvailable,
     cheatsheet: cheat?.url ?? chapter.cheatsheet,
     pastpaperAvailable: pyq ? true : chapter.pastpaperAvailable,

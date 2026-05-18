@@ -47,6 +47,19 @@ export async function POST(req: Request) {
   const kind = String(body?.kind ?? "") as RegistryKind;
   const classId = String(body?.classId ?? "");
   const slug = body?.slug ? String(body.slug) : undefined;
+  const phaseRaw = body?.phase ? String(body.phase).trim() : undefined;
+  const phaseLabel = body?.phaseLabel
+    ? String(body.phaseLabel).trim().slice(0, 120)
+    : undefined;
+  // Only `notes` supports phases. Sanitize to a slug-safe form.
+  const phase =
+    kind === "notes" && phaseRaw
+      ? phaseRaw
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .slice(0, 40) || undefined
+      : undefined;
   const url = String(body?.url ?? "");
   const fileName = String(body?.fileName ?? "");
   const size = Number(body?.size) || 0;
@@ -110,6 +123,8 @@ export async function POST(req: Request) {
     kind,
     classId,
     slug,
+    phase,
+    phaseLabel: phase ? phaseLabel ?? phase : undefined,
     url: finalUrl,
     fileName: fileName.slice(0, 200),
     contentKind: detectContentKind(finalUrl),
@@ -162,6 +177,7 @@ export async function DELETE(req: Request) {
   const kind = url.searchParams.get("kind") as RegistryKind | null;
   const classId = url.searchParams.get("classId");
   const slug = url.searchParams.get("slug") ?? undefined;
+  const phase = url.searchParams.get("phase") ?? undefined;
 
   if (!kind || !VALID_KINDS.includes(kind)) {
     return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
@@ -170,7 +186,12 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "Invalid classId" }, { status: 400 });
   }
 
-  const removed = await deleteAsset(kind, classId, slug);
+  const removed = await deleteAsset(
+    kind,
+    classId,
+    slug,
+    kind === "notes" ? phase : undefined,
+  );
   // Best-effort delete the blob too — don't fail the request if it errors
   if (removed?.url) {
     try {

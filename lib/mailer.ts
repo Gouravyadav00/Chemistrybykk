@@ -74,8 +74,15 @@ function newAssetEmail(
 ): { subject: string; html: string } {
   const label = kindLabel(entry.kind);
   const greet = studentName ? `Hi ${escapeHtml(studentName)},` : "Hi there,";
-  const subject = `New ${label} — Class ${entry.classId}: ${chapterName}`;
-  const link = `${siteUrl()}/#learn`;
+  const phaseSuffix = entry.phaseLabel ? ` — ${entry.phaseLabel}` : "";
+  const subject = `New ${label} — Class ${entry.classId}: ${chapterName}${phaseSuffix}`;
+  // Deep-link to the asset so the modal auto-opens on the right phase.
+  const params = new URLSearchParams({
+    class: entry.classId,
+    ...(entry.slug ? { chapter: entry.slug } : {}),
+    ...(entry.phase ? { phase: entry.phase } : {}),
+  });
+  const link = `${siteUrl()}/?${params.toString()}#learn`;
   const html = `
   <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1a2a4d; background: #eef4ff; border-radius: 20px;">
     <div style="background: linear-gradient(135deg,#4F8EF7,#3563d3); color: white; padding: 20px; border-radius: 16px; margin-bottom: 20px;">
@@ -85,7 +92,11 @@ function newAssetEmail(
     <p style="font-size: 15px; line-height: 1.55;">${greet}</p>
     <p style="font-size: 15px; line-height: 1.55;">
       Khyati has uploaded a new <b>${escapeHtml(label.toLowerCase())}</b> for
-      <b>Class ${escapeHtml(entry.classId)} — ${escapeHtml(chapterName)}</b>.
+      <b>Class ${escapeHtml(entry.classId)} — ${escapeHtml(chapterName)}</b>${
+        entry.phaseLabel
+          ? ` <span style="color:#3563d3">(${escapeHtml(entry.phaseLabel)})</span>`
+          : ""
+      }.
       Hop in and start reading.
     </p>
     <p style="text-align: center; margin: 28px 0;">
