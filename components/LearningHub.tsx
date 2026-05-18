@@ -11,6 +11,7 @@ import {
   Eye,
   FileText,
   Layers,
+  Lock,
   Map,
   Play,
   ScrollText,
@@ -57,6 +58,7 @@ export default function LearningHub() {
     initialPhase?: string;
   } | null>(null);
   const [zoomRoadmap, setZoomRoadmap] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const [deepLink, setDeepLink] = useState<{
     classId: string;
     slug: string;
@@ -65,6 +67,24 @@ export default function LearningHub() {
 
   useEffect(() => {
     fetchAssetMap().then(setAssets);
+  }, []);
+
+  // Auth check so downloads stay gated behind sign-in. Public blob URLs are
+  // reachable by anyone who has them, but the UI should not invite a guest
+  // to grab a PDF in one click — that defeats the lead-gen we built around
+  // the sign-in form.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        setSignedIn(d?.role === "admin" || d?.role === "subscriber");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Deep-link: ?class=12&chapter=solutions[&phase=phase-1] auto-opens the
@@ -261,28 +281,41 @@ export default function LearningHub() {
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={downloadSelected}
-            disabled={selected.size === 0}
-            className={`clay-btn-secondary text-xs sm:text-sm flex-1 md:flex-initial ${
-              selected.size === 0 ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          >
-            <Download size={16} />
-            Selected ({selected.size})
-          </button>
-          <button
-            onClick={downloadBundle}
-            disabled={!allAvailable}
-            className={`clay-btn-primary text-xs sm:text-sm flex-1 md:flex-initial ${
-              !allAvailable ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          >
-            <Sparkles size={16} />
-            <span className="whitespace-nowrap">
-              Full {chapterKind === "cheatsheet" ? "Cheatsheet" : "Notes"} Bundle
-            </span>
-          </button>
+          {signedIn ? (
+            <>
+              <button
+                onClick={downloadSelected}
+                disabled={selected.size === 0}
+                className={`clay-btn-secondary text-xs sm:text-sm flex-1 md:flex-initial ${
+                  selected.size === 0 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                <Download size={16} />
+                Selected ({selected.size})
+              </button>
+              <button
+                onClick={downloadBundle}
+                disabled={!allAvailable}
+                className={`clay-btn-primary text-xs sm:text-sm flex-1 md:flex-initial ${
+                  !allAvailable ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                <Sparkles size={16} />
+                <span className="whitespace-nowrap">
+                  Full {chapterKind === "cheatsheet" ? "Cheatsheet" : "Notes"} Bundle
+                </span>
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/signin"
+              className="clay-btn-primary text-xs sm:text-sm flex-1 md:flex-initial"
+              title="Sign in to download"
+            >
+              <Lock size={16} />
+              <span className="whitespace-nowrap">Sign in to download</span>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -357,14 +390,24 @@ export default function LearningHub() {
                 </h3>
 
                 {chapterKind === "notes" && ch.phases && ch.phases.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {ch.phases.map((p, idx) => (
-                      <span
+                      <button
                         key={p.phase}
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-clay-accentDeep"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpen({
+                            chapter: ch,
+                            kind: "notes",
+                            initialPhase: p.phase,
+                          });
+                        }}
+                        title={`Open ${p.label}`}
+                        className="clay-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 text-[11px] font-semibold px-2.5 py-1 rounded-xl text-clay-accentDeep transition-colors max-w-full truncate"
                       >
-                        {idx + 1}. {p.label}
-                      </span>
+                        <span className="opacity-70 mr-1">{idx + 1}.</span>
+                        {p.label}
+                      </button>
                     ))}
                   </div>
                 )}
@@ -375,22 +418,32 @@ export default function LearningHub() {
                   >
                     {activeAvail ? activeLabelReady : "Coming Soon"}
                   </span>
-                  {activeAvail && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        downloadOne(ch);
-                      }}
-                      className="text-clay-accent hover:text-clay-accentDeep flex items-center gap-1 text-sm font-semibold"
-                    >
-                      <Download size={14} />{" "}
-                      {chapterKind === "cheatsheet"
-                        ? "Sheet"
-                        : chapterKind === "pastpaper"
-                          ? "PYQ"
-                          : "PDF"}
-                    </button>
-                  )}
+                  {activeAvail &&
+                    (signedIn ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadOne(ch);
+                        }}
+                        className="text-clay-accent hover:text-clay-accentDeep flex items-center gap-1 text-sm font-semibold"
+                      >
+                        <Download size={14} />{" "}
+                        {chapterKind === "cheatsheet"
+                          ? "Sheet"
+                          : chapterKind === "pastpaper"
+                            ? "PYQ"
+                            : "PDF"}
+                      </button>
+                    ) : (
+                      <Link
+                        href="/signin"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Sign in to download"
+                        className="text-clay-muted hover:text-clay-accentDeep flex items-center gap-1 text-sm font-semibold"
+                      >
+                        <Lock size={14} /> Sign in
+                      </Link>
+                    ))}
                 </div>
 
                 {/* small availability indicator */}

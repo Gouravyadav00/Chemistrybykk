@@ -317,6 +317,9 @@ function LibraryTab() {
               key={ch.slug}
               chapter={ch}
               classId={activeId}
+              legacyNotesUrl={
+                assets[`notes:${activeId}:${ch.slug}`]?.url
+              }
               onUpload={onUpload}
               onRemove={removeAsset}
             />
@@ -521,11 +524,13 @@ function SummaryTile({
 function ChapterRow({
   chapter: ch,
   classId,
+  legacyNotesUrl,
   onUpload,
   onRemove,
 }: {
   chapter: Chapter;
   classId: string;
+  legacyNotesUrl?: string;
   onUpload: (
     slug: string,
     kind: AssetKind,
@@ -556,7 +561,7 @@ function ChapterRow({
           classId={classId}
           slug={ch.slug}
           phases={ch.phases ?? []}
-          legacyUrl={ch.phases?.length ? undefined : ch.file}
+          legacyUrl={legacyNotesUrl}
           onUpload={onUpload}
           onRemove={onRemove}
         />
@@ -839,11 +844,71 @@ function NotesPhasesSection({
         </div>
       )}
 
-      {legacyUrl && phases.length === 0 && (
-        <div className="clay-inset p-2.5 mb-3 text-[11px] text-clay-muted">
-          <span className="font-semibold text-orange-600">Legacy single PDF</span> is
-          live. Add phases below to split into sections — the single PDF will be
-          superseded by the first phase you upload.
+      {legacyUrl && (
+        <div className="clay-sm p-3 mb-2">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] uppercase tracking-wide text-orange-600">
+                Legacy · single PDF (no phase)
+              </div>
+              <div className="font-semibold text-sm text-clay-ink dark:text-white truncate">
+                Full chapter notes
+              </div>
+              <div className="text-[10px] text-clay-muted truncate">
+                {legacyUrl}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <a
+              href={legacyUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="clay-btn-secondary text-[11px] py-1.5 px-2.5"
+              title="Preview"
+            >
+              <Download size={12} /> Preview
+            </a>
+            <label className="clay-btn-secondary text-[11px] py-1.5 px-2.5 cursor-pointer">
+              {perPhaseBusy === "__legacy__" ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <UploadIcon size={12} />
+              )}
+              Replace
+              <input
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                disabled={perPhaseBusy === "__legacy__"}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setPerPhaseBusy("__legacy__");
+                  try {
+                    await onUpload(slug, "notes", f);
+                  } finally {
+                    setPerPhaseBusy(null);
+                  }
+                  e.currentTarget.value = "";
+                }}
+              />
+            </label>
+            <button
+              onClick={async () => {
+                setPerPhaseBusy("__legacy__");
+                try {
+                  await onRemove(slug, "notes");
+                } finally {
+                  setPerPhaseBusy(null);
+                }
+              }}
+              disabled={perPhaseBusy === "__legacy__"}
+              className="clay-btn-secondary text-[11px] py-1.5 px-2.5 text-red-500"
+            >
+              <Trash2 size={12} /> Delete
+            </button>
+          </div>
         </div>
       )}
 
