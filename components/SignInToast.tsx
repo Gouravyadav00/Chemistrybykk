@@ -16,12 +16,38 @@ export default function SignInToast() {
     if (typeof window === "undefined") return;
     if (sessionStorage.getItem(SHOWN_KEY) === "1") return;
 
-    const showT = window.setTimeout(() => {
-      setOpen(true);
-      sessionStorage.setItem(SHOWN_KEY, "1");
-    }, APPEAR_DELAY);
+    let timer = 0;
+    let cancelled = false;
 
-    return () => window.clearTimeout(showT);
+    // Skip the toast for anyone already signed in (admin or student).
+    fetch("/api/auth", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        if (d?.role === "admin" || d?.role === "subscriber") {
+          sessionStorage.setItem(SHOWN_KEY, "1");
+          return;
+        }
+        timer = window.setTimeout(() => {
+          if (cancelled) return;
+          setOpen(true);
+          sessionStorage.setItem(SHOWN_KEY, "1");
+        }, APPEAR_DELAY);
+      })
+      .catch(() => {
+        // If the auth check fails, fall back to the original behavior so
+        // guests still get the prompt.
+        timer = window.setTimeout(() => {
+          if (cancelled) return;
+          setOpen(true);
+          sessionStorage.setItem(SHOWN_KEY, "1");
+        }, APPEAR_DELAY);
+      });
+
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {
