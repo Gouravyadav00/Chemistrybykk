@@ -50,6 +50,7 @@ export default function LearningHub() {
   const [activeId, setActiveId] = useState<string>("12");
   const [kind, setKind] = useState<HubKind>("notes");
   const [assets, setAssets] = useState<AssetMap>({});
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
   const [resolved, setResolved] = useState<ResolvedClass | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -67,7 +68,10 @@ export default function LearningHub() {
   } | null>(null);
 
   useEffect(() => {
-    fetchAssetMap().then(setAssets);
+    fetchAssetMap().then((m) => {
+      setAssets(m);
+      setAssetsLoaded(true);
+    });
   }, []);
 
   // Auth check so downloads stay gated behind sign-in. Public blob URLs are
@@ -103,8 +107,10 @@ export default function LearningHub() {
   }, []);
 
   // Once asset overrides land and the chapter exists, pop the modal.
+  // Waiting for assetsLoaded matters: opening earlier would capture the
+  // chapter without its uploaded notes and show "Coming Soon" instead.
   useEffect(() => {
-    if (!deepLink || !resolved) return;
+    if (!deepLink || !resolved || !assetsLoaded) return;
     if (resolved.classId !== deepLink.classId) return;
     const ch = resolved.chapters.find((c) => c.slug === deepLink.slug);
     if (!ch) return;
@@ -113,7 +119,7 @@ export default function LearningHub() {
     requestAnimationFrame(() => {
       document.getElementById("learn")?.scrollIntoView({ behavior: "smooth" });
     });
-  }, [deepLink, resolved]);
+  }, [deepLink, resolved, assetsLoaded]);
 
   useEffect(() => {
     setResolved(resolveClass(activeId, assets));
@@ -498,7 +504,14 @@ export default function LearningHub() {
       )}
 
       <AssetModal
-        chapter={open?.chapter ?? null}
+        // Re-resolve by slug so the modal always sees the latest asset
+        // overrides, even if it was opened before the asset map arrived.
+        chapter={
+          open
+            ? resolved?.chapters.find((c) => c.slug === open.chapter.slug) ??
+              open.chapter
+            : null
+        }
         classId={activeId}
         kind={open?.kind ?? "notes"}
         initialPhase={open?.initialPhase}
