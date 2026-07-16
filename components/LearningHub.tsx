@@ -31,6 +31,7 @@ import {
   type Chapter,
 } from "@/data/chapters";
 import { hasQuiz, QUIZZES } from "@/data/quizzes";
+import { getLectureFor, watchUrl } from "@/data/videos";
 import {
   fetchAssetMap,
   getRoadmap,
@@ -333,6 +334,7 @@ export default function LearningHub() {
             const isSel = selected.has(ch.slug);
             const notesOk = ch.notesAvailable;
             const pyqOk = ch.pastpaperAvailable;
+            const lecture = getLectureFor(activeId, ch.slug);
             const activeAvail = getAssetAvailable(ch, chapterKind);
             const iconCls =
               chapterKind === "cheatsheet"
@@ -467,6 +469,18 @@ export default function LearningHub() {
                     label="PYQ"
                     tone="violet"
                   />
+                  {lecture && (
+                    <a
+                      href={watchUrl(lecture)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      title="Watch the full chapter on YouTube"
+                      className="px-2 py-1 rounded-full flex items-center gap-1 font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                    >
+                      <Play size={10} /> Lecture
+                    </a>
+                  )}
                 </div>
               </motion.div>
             );

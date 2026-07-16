@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import SignInToast from "@/components/SignInToast";
 import SocialLinks from "@/components/SocialLinks";
 import Testimonials from "@/components/Testimonials";
+import VideoLectures from "@/components/VideoLectures";
 import VisitPing from "@/components/VisitPing";
 import WalkthroughVideo from "@/components/WalkthroughVideo";
 
@@ -22,6 +23,7 @@ export default function HomePage() {
         <About />
         <WalkthroughVideo />
         <LearningHub />
+        <VideoLectures />
         <Testimonials />
         <SocialLinks />
       </main>

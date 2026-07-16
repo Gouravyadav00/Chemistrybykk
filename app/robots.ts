@@ -13,7 +13,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/api/", "/admin", "/signin"],
       },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
+    sitemap: [`${siteUrl}/sitemap.xml`, `${siteUrl}/video-sitemap.xml`],
     host: siteUrl,
   };
 }

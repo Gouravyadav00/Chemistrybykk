@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { thumbUrl, VIDEOS, watchUrl } from "@/data/videos";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     template: "%s · ChemistryByKK",
   },
   description:
-    "Free NCERT chemistry notes, cheatsheets, past papers and chapter-wise quizzes for Class 9, 10, 11 and 12. Built by Khyati Kaushik (M.Sc. Chemistry, PGT).",
+    "Free NCERT chemistry notes, one-shot video lectures, cheatsheets, question banks and chapter-wise quizzes for Class 9, 10, 11 and 12. Built by Khyati Kaushik (M.Sc. Chemistry, PGT).",
   metadataBase: new URL(siteUrl),
   alternates: { canonical: "/" },
   keywords: [
@@ -41,6 +42,13 @@ export const metadata: Metadata = {
     "Chemistry past papers",
     "Chemistry PYQ",
     "Board exam chemistry",
+    "Chemical Reactions and Equations Class 10",
+    "Chemical Reactions and Equations one shot",
+    "Class 10 Chemistry one shot",
+    "Class 10 Science Chapter 1",
+    "Chemistry video lectures",
+    "CBSE Class 10 Chemistry",
+    "Chemistry one shot",
   ],
   authors: [{ name: "Khyati Kaushik" }],
   creator: "Khyati Kaushik",
@@ -48,7 +56,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ChemistryByKK — Chemistry Simplified for Class 9–12",
     description:
-      "Free NCERT notes, cheatsheets, past papers and quizzes for Class 9–12 chemistry, built by Khyati Kaushik (M.Sc. Chemistry).",
+      "Free NCERT notes, one-shot video lectures, cheatsheets, question banks and quizzes for Class 9–12 chemistry, built by Khyati Kaushik (M.Sc. Chemistry).",
     url: siteUrl,
     siteName: "ChemistryByKK",
     type: "website",
@@ -120,6 +128,18 @@ const jsonLd = {
       inLanguage: "en-IN",
       publisher: { "@id": `${siteUrl}#org` },
     },
+    ...VIDEOS.map((v) => ({
+      "@type": "VideoObject",
+      "@id": `${siteUrl}#video-${v.id}`,
+      name: v.title,
+      description: v.description,
+      thumbnailUrl: [thumbUrl(v.id), thumbUrl(v.id, "hqdefault")],
+      uploadDate: v.uploadDate,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${v.id}`,
+      contentUrl: watchUrl(v),
+      publisher: { "@id": `${siteUrl}#org` },
+      author: { "@id": `${siteUrl}#kk` },
+    })),
   ],
 };
 
