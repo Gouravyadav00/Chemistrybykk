@@ -28,6 +28,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
+      url: `${siteUrl}/quiz`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
       url: `${siteUrl}/share`,
       lastModified: now,
       changeFrequency: "monthly",
@@ -47,6 +53,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
+  const quizClassRoutes: MetadataRoute.Sitemap = classes.map((c) => ({
+    url: `${siteUrl}/quiz/${c.classId}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.65,
+  }));
+
   const quizRoutes: MetadataRoute.Sitemap = QUIZZES.map((q) => ({
     url: `${siteUrl}/quiz/${q.classId}/${q.chapterSlug}`,
     lastModified: now,
@@ -62,5 +75,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  return [...base, ...quizRoutes, ...classAnchors];
+  return [...base, ...quizClassRoutes, ...quizRoutes, ...classAnchors];
 }

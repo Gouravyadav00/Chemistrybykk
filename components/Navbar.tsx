@@ -28,6 +28,7 @@ const links = [
   { href: "#about", label: "About" },
   { href: "#learn", label: "Learning Hub" },
   { href: "#videos", label: "Videos" },
+  { href: "/quiz", label: "Quizzes" },
   { href: "#connect", label: "Connect" },
 ];
 
