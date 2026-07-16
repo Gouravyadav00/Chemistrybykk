@@ -22,7 +22,7 @@ export const VIDEOS: SiteVideo[] = [
       "Introduction to Chemistry by K K | Complete Website Tour | By: Khyati Kaushik",
     description:
       "Complete tour of the ChemistryByKK website — how to find chapter notes, cheatsheets, question banks, take quizzes, ask doubts and keep your daily streak.",
-    uploadDate: "2026-05-18",
+    uploadDate: "2026-05-17",
   },
   {
     id: "YzJ3BgMNAT8",
@@ -31,7 +31,7 @@ export const VIDEOS: SiteVideo[] = [
       "Chemical Reactions & Equations | Class 10 Science | Complete Chapter in One Shot",
     description:
       "Chemical Reactions and Equations Class 10 full chapter in one shot — chemical equations, balancing, combination, decomposition, displacement, double displacement and redox reactions, oxidation & reduction, corrosion and rancidity, with board exam tips.",
-    uploadDate: "2026-07-15",
+    uploadDate: "2026-07-08",
     classId: "10",
     chapterSlug: "chemical-reactions-and-equations",
   },
@@ -41,7 +41,7 @@ export const VIDEOS: SiteVideo[] = [
     title: "How does a chemical reaction occur?",
     description:
       "How does a chemical reaction actually happen? Bond breaking and bond forming explained in under a minute.",
-    uploadDate: "2026-07-15",
+    uploadDate: "2026-06-16",
     classId: "10",
     chapterSlug: "chemical-reactions-and-equations",
   },
@@ -51,7 +51,7 @@ export const VIDEOS: SiteVideo[] = [
     title: "What is Chemistry?",
     description:
       "What is Chemistry? A quick one-minute intro to what you actually study in chemistry.",
-    uploadDate: "2026-07-15",
+    uploadDate: "2026-06-15",
   },
 ];
 
